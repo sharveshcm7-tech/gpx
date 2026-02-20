@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Submissions — Code Grand Prix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// SUBMISSION_LOG</small>
+    My Submissions
+  </div>
+  <span class="badge badge-muted">{{ submissions|length }} total</span>
+</div>
+
+<div class="card">
+  {% if submissions %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Problem</th>
+        <th>Language</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>Submitted At</th>
+        <th>Admin Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in submissions %}
+      <tr>
+        <td class="mono" style="color: var(--muted)">#{{ s.id }}</td>
+        <td><a href="/problem/{{ s.problem_id }}" style="color: var(--text); text-decoration: none;">
+          <strong>{{ s.problem_title }}</strong>
+        </a></td>
+        <td><span class="badge badge-blue">{{ s.language|upper }}</span></td>
+        <td>
+          {% if s.status == 'Accepted' %}<span class="badge badge-green">✓ ACCEPTED</span>
+          {% elif s.status == 'Wrong Answer' %}<span class="badge badge-red">✗ WRONG ANSWER</span>
+          {% elif s.status == 'Pending' %}<span class="badge badge-gold">⏳ PENDING</span>
+          {% elif s.status == 'Partial' %}<span class="badge badge-blue">◑ PARTIAL</span>
+          {% else %}<span class="badge badge-muted">{{ s.status }}</span>{% endif %}
+        </td>
+        <td class="mono" style="color: var(--gold)">{{ s.score }}</td>
+        <td class="mono" style="color: var(--muted); font-size: 0.8rem">{{ s.submitted_at[:16] }}</td>
+        <td style="font-size: 0.85rem; color: var(--muted)">{{ s.admin_notes or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align: center; padding: 4rem; color: var(--muted);">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">📤</div>
+    <div style="font-family: 'Orbitron', monospace; font-size: 0.9rem;">No submissions yet</div>
+    <p style="margin-top: 0.5rem; font-size: 0.85rem">Start solving problems from the <a href="/contest" style="color: var(--red)">contest page</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

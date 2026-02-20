@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% block title %}Problem Management — Code Grand Prix{% endblock %}
+
+{% block extra_head %}
+<style>
+.prob-table td { vertical-align: top; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// PROBLEM_BANK</small>
+    Problem Management
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <button class="btn btn-outline btn-sm" onclick="showUploadModal()">⬆ Import CSV</button>
+    <button class="btn btn-primary btn-sm" onclick="showAddModal()">＋ Add Problem</button>
+  </div>
+</div>
+
+<div class="card">
+  {% if problems %}
+  <table class="prob-table">
+    <thead>
+      <tr><th>#</th><th>Title</th><th>Category</th><th>Difficulty</th><th>Points</th><th>Visible</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for p in problems %}
+      <tr>
+        <td class="mono" style="color: var(--muted)">{{ p.id }}</td>
+        <td><strong>{{ p.title }}</strong><div style="color: var(--muted); font-size: 0.75rem; margin-top: 0.25rem;">{{ p.description[:80] }}...</div></td>
+        <td><span class="badge badge-blue">{{ p.category }}</span></td>
+        <td><span class="diff-{{ p.difficulty|lower }}">{{ p.difficulty }}</span></td>
+        <td class="mono" style="color: var(--gold)">{{ p.points }}</td>
+        <td>
+          <button onclick="toggleVisibility({{ p.id }}, {{ p.visible }})" class="badge {{ 'badge-green' if p.visible else 'badge-muted' }}" style="cursor: pointer; border: 1px solid; background: transparent;">
+            {{ '👁 VISIBLE' if p.visible else '🙈 HIDDEN' }}
+          </button>
+        </td>
+        <td>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-outline btn-sm" onclick='editProblem({{ p.id }}, {{ p|tojson }})'>Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProblem({{ p.id }})">Delete</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align: center; padding: 3rem; color: var(--muted);">
+    <div style="font-size: 2rem; margin-bottom: 1rem;">🎯</div>
+    No problems yet. Add some!
+  </div>
+  {% endif %}
+</div>
+
+<!-- CSV Format Info -->
+<div class="card" style="margin-top: 1.5rem;">
+  <div class="card-title">📄 CSV Import Format</div>
+  <div class="code-block">title,description,constraints,sample_input,sample_output,difficulty,points,category
+Two Sum,"Given an array of integers nums and an integer target, return indices of two numbers that sum to target.","1 <= nums.length <= 10^4","[2,7,11,15]\n9","[0,1]",Easy,100,Arrays
+Fibonacci,"Return the nth Fibonacci number.","1 <= n <= 45","5","5",Easy,80,DP</div>
+</div>
+
+<!-- Add/Edit Problem Modal -->
+<div id="prob-modal" class="modal-overlay">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-title" id="prob-modal-title">Add Problem</div>
+    <button class="modal-close" onclick="document.getElementById('prob-modal').classList.remove('show')">✕</button>
+    <input type="hidden" id="prob-id">
+    <div class="grid-2">
+      <div class="form-group" style="grid-column: span 2">
+        <label class="form-label">Title *</label>
+        <input class="form-input" id="prob-title" placeholder="Two Sum">
+      </div>
+      <div class="form-group" style="grid-column: span 2">
+        <label class="form-label">Problem Statement *</label>
+        <textarea class="form-textarea" id="prob-desc" placeholder="Given an array..."></textarea>
+      </div>
+      <div class="form-group" style="grid-column: span 2">
+        <label class="form-label">Constraints</label>
+        <textarea class="form-textarea" id="prob-constraints" style="min-height: 80px" placeholder="1 <= n <= 10^5"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sample Input</label>
+        <textarea class="form-textarea" id="prob-input" style="min-height: 80px" placeholder="[2,7,11,15]&#10;9"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sample Output</label>
+        <textarea class="form-textarea" id="prob-output" style="min-height: 80px" placeholder="[0,1]"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Difficulty</label>
+        <select class="form-select" id="prob-diff">
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Points</label>
+        <input class="form-input" id="prob-points" type="number" value="100" min="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="prob-cat">
+          <option>Arrays</option><option>DP</option><option>Graphs</option>
+          <option>Strings</option><option>Greedy</option><option>Math</option>
+          <option>Trees</option><option>Binary Search</option><option>Two Pointers</option>
+        </select>
+      </div>
+      <div class="form-group" style="display: flex; align-items: center; gap: 1rem; padding-top: 1.5rem;">
+        <label class="form-label" style="margin: 0">Visible to teams</label>
+        <input type="checkbox" id="prob-visible" style="width: auto">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveProblem()">💾 Save Problem</button>
+  </div>
+</div>
+
+<!-- Upload CSV Modal -->
+<div id="csv-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">⬆ Import Problems via CSV</div>
+    <button class="modal-close" onclick="document.getElementById('csv-modal').classList.remove('show')">✕</button>
+    <div class="form-group">
+      <label class="form-label">CSV File</label>
+      <input type="file" id="csv-file" accept=".csv" style="color: var(--text); background: var(--panel2); border: 1px solid var(--border); padding: 0.75rem; width: 100%;">
+    </div>
+    <button class="btn btn-primary" onclick="uploadCSV()">⬆ Import</button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let editMode = false;
+
+function showAddModal() {
+  editMode = false;
+  document.getElementById('prob-modal-title').textContent = 'Add Problem';
+  document.getElementById('prob-id').value = '';
+  ['title','desc','constraints','input','output'].forEach(f => document.getElementById('prob-'+f).value = '');
+  document.getElementById('prob-points').value = 100;
+  document.getElementById('prob-diff').value = 'Medium';
+  document.getElementById('prob-cat').value = 'Arrays';
+  document.getElementById('prob-visible').checked = false;
+  document.getElementById('prob-modal').classList.add('show');
+}
+
+function editProblem(id, p) {
+  editMode = true;
+  document.getElementById('prob-modal-title').textContent = 'Edit Problem';
+  document.getElementById('prob-id').value = id;
+  document.getElementById('prob-title').value = p.title || '';
+  document.getElementById('prob-desc').value = p.description || '';
+  document.getElementById('prob-constraints').value = p.constraints || '';
+  document.getElementById('prob-input').value = p.sample_input || '';
+  document.getElementById('prob-output').value = p.sample_output || '';
+  document.getElementById('prob-diff').value = p.difficulty || 'Medium';
+  document.getElementById('prob-points').value = p.points || 100;
+  document.getElementById('prob-cat').value = p.category || 'Arrays';
+  document.getElementById('prob-visible').checked = p.visible == 1;
+  document.getElementById('prob-modal').classList.add('show');
+}
+
+async function saveProblem() {
+  const id = document.getElementById('prob-id').value;
+  const body = {
+    title: document.getElementById('prob-title').value,
+    description: document.getElementById('prob-desc').value,
+    constraints: document.getElementById('prob-constraints').value,
+    sample_input: document.getElementById('prob-input').value,
+    sample_output: document.getElementById('prob-output').value,
+    difficulty: document.getElementById('prob-diff').value,
+    points: document.getElementById('prob-points').value,
+    category: document.getElementById('prob-cat').value,
+    visible: document.getElementById('prob-visible').checked ? 1 : 0,
+  };
+  if (!body.title || !body.description) return showToast('Title and description required', 'error');
+  const url = editMode ? `/admin/problem/${id}/edit` : '/admin/problem/add';
+  const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json();
+  document.getElementById('prob-modal').classList.remove('show');
+  showToast(data.success ? '✓ Saved!' : '✗ Error', data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 800);
+}
+
+async function deleteProblem(id) {
+  if (!confirm('Delete this problem? This will also delete all its submissions!')) return;
+  const res = await fetch(`/admin/problem/${id}/delete`, {method:'POST'});
+  const data = await res.json();
+  showToast(data.success ? '✓ Deleted' : '✗ Error', data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 800);
+}
+
+async function toggleVisibility(id, current) {
+  const res = await fetch(`/admin/problem/${id}/edit`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ visible: current ? 0 : 1 })
+  });
+  const data = await res.json();
+  showToast(data.success ? (current ? '🙈 Problem hidden' : '👁 Problem now visible to teams') : '✗ Error',
+            data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 600);
+}
+
+function showUploadModal() {
+  document.getElementById('csv-modal').classList.add('show');
+}
+
+async function uploadCSV() {
+  const file = document.getElementById('csv-file').files[0];
+  if (!file) return showToast('Select a CSV file', 'error');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/admin/problem/upload_csv', {method:'POST', body: formData});
+  const data = await res.json();
+  document.getElementById('csv-modal').classList.remove('show');
+  showToast(data.message || (data.success ? '✓ Imported' : '✗ Error'), data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 1000);
+}
+</script>
+{% endblock %}

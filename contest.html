@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Problems — Code Grand Prix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// RACE_PROBLEMS</small>
+    Problem Set
+  </div>
+  {% if settings.get('contest_status') == 'active' %}
+  <span class="badge badge-green">🟢 RACE IN PROGRESS</span>
+  {% elif settings.get('contest_status') == 'upcoming' %}
+  <span class="badge badge-gold">⏳ RACE UPCOMING</span>
+  {% else %}
+  <span class="badge badge-muted">{{ settings.get('contest_status','').upper() }}</span>
+  {% endif %}
+</div>
+
+{% if not team %}
+<div class="card" style="margin-bottom: 1.5rem; border-color: var(--gold);">
+  <p style="color: var(--gold);">⚠️ You need to be in an <strong>approved</strong> team to submit solutions. <a href="/dashboard" style="color: var(--gold)">Go to dashboard →</a></p>
+</div>
+{% elif team.status != 'approved' %}
+<div class="card" style="margin-bottom: 1.5rem; border-color: var(--gold);">
+  <p style="color: var(--gold);">⏳ Your team is pending admin approval. Hang tight!</p>
+</div>
+{% endif %}
+
+{% if problems %}
+<!-- Category filter buttons -->
+<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+  <button class="btn btn-outline btn-sm filter-btn active" onclick="filterCat('all', this)">All</button>
+  {% set cats = [] %}
+  {% for p in problems %}{% if p.category not in cats %}{% if cats.append(p.category) %}{% endif %}{% endif %}{% endfor %}
+  {% for cat in cats %}
+  <button class="btn btn-outline btn-sm filter-btn" onclick="filterCat('{{ cat }}', this)">{{ cat }}</button>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <table id="problems-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Problem</th>
+        <th>Category</th>
+        <th>Difficulty</th>
+        <th>Points</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in problems %}
+      <tr class="prob-row" data-cat="{{ p.category }}">
+        <td class="mono" style="color: var(--muted)">P{{ loop.index }}</td>
+        <td>
+          <strong>{{ p.title }}</strong>
+          {% if p.id in solved_ids %} <span style="color: var(--green); font-size: 0.75rem; margin-left: 0.5rem;">✓ First blood available</span>{% endif %}
+        </td>
+        <td><span class="badge badge-blue">{{ p.category }}</span></td>
+        <td>
+          <span class="diff-{{ p.difficulty|lower }}">
+            {{ '●●●' if p.difficulty == 'Hard' else ('●●○' if p.difficulty == 'Medium' else '●○○') }}
+            {{ p.difficulty }}
+          </span>
+        </td>
+        <td>
+          <span class="mono" style="color: var(--gold); font-size: 1.1rem; font-weight: 700">{{ p.points }}</span>
+          <span style="color: var(--muted); font-size: 0.75rem">pts</span>
+        </td>
+        <td>
+          {% if p.id in solved_ids %}
+            <span class="badge badge-green">✓ SOLVED</span>
+          {% else %}
+            <span class="badge badge-muted">UNSOLVED</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/problem/{{ p.id }}" class="btn btn-primary btn-sm">
+            {% if p.id in solved_ids %}Revisit{% else %}Solve →{% endif %}
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top: 1rem; color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;">
+  {{ problems|length }} problems · {{ solved_ids|length }} solved
+</div>
+
+{% else %}
+<div class="card" style="text-align: center; padding: 4rem;">
+  <div style="font-family: 'Orbitron', monospace; font-size: 3rem; margin-bottom: 1rem;">🏁</div>
+  <div style="font-family: 'Orbitron', monospace; font-size: 1rem; color: var(--muted);">Problems will be revealed when the race starts</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterCat(cat, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.prob-row').forEach(row => {
+    row.style.display = (cat === 'all' || row.dataset.cat === cat) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard — Code Grand Prix{% endblock %}
+
+{% block extra_head %}
+<style>
+.control-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.control-btn {
+  padding: 1.25rem; background: var(--panel); border: 1px solid var(--border);
+  color: var(--text); cursor: pointer; font-family: 'Orbitron', monospace;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 2px;
+  transition: all 0.2s; text-align: center;
+  border-top: 3px solid var(--border);
+}
+.control-btn:hover { background: rgba(227,0,34,0.1); border-top-color: var(--red); }
+.control-btn.active-green { border-top-color: var(--green); background: rgba(0,255,136,0.05); }
+.control-btn.active-gold { border-top-color: var(--gold); background: rgba(255,215,0,0.05); }
+.control-btn.active-red { border-top-color: var(--red); background: rgba(227,0,34,0.05); }
+.control-btn .icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// RACE_CONTROL_CENTER</small>
+    Admin Command Post
+  </div>
+  <div>
+    <span id="live-status" class="badge badge-gold">{{ settings.get('contest_status','upcoming').upper() }}</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  <div class="stat-card">
+    <div class="stat-num">{{ stats.teams }}</div>
+    <div class="stat-label">Teams</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--blue)">
+    <div class="stat-num" style="color: var(--blue)">{{ stats.users }}</div>
+    <div class="stat-label">Users</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--gold)">
+    <div class="stat-num" style="color: var(--gold)">{{ stats.problems }}</div>
+    <div class="stat-label">Problems</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--green)">
+    <div class="stat-num" style="color: var(--green)">{{ stats.submissions }}</div>
+    <div class="stat-label">Submissions</div>
+  </div>
+</div>
+
+<!-- RACE CONTROLS -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-title">⚡ Event Control Panel</div>
+  <div class="control-panel">
+    <button class="control-btn active-green" onclick="contestControl('start')">
+      <span class="icon">🚦</span>START RACE
+    </button>
+    <button class="control-btn active-gold" onclick="contestControl('pause')">
+      <span class="icon">⏸</span>PAUSE
+    </button>
+    <button class="control-btn active-red" onclick="contestControl('end')">
+      <span class="icon">🏁</span>END RACE
+    </button>
+    <button class="control-btn" onclick="contestControl('freeze')">
+      <span class="icon">🧊</span>FREEZE LB
+    </button>
+    <button class="control-btn" onclick="contestControl('unfreeze')">
+      <span class="icon">🔥</span>UNFREEZE LB
+    </button>
+    <button class="control-btn" onclick="showAnnounceModal()">
+      <span class="icon">📢</span>ANNOUNCE
+    </button>
+  </div>
+
+  <!-- Event Settings -->
+  <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+    <div class="card-title">Event Settings</div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Event Name</label>
+        <input class="form-input" id="ev-name" value="{{ settings.get('event_name','') }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tagline</label>
+        <input class="form-input" id="ev-tagline" value="{{ settings.get('event_tagline','') }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contest Start</label>
+        <input class="form-input" id="ev-start" type="datetime-local" value="{{ settings.get('contest_start','')[:16] }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contest End</label>
+        <input class="form-input" id="ev-end" type="datetime-local" value="{{ settings.get('contest_end','')[:16] }}">
+      </div>
+    </div>
+    <button class="btn btn-gold" onclick="saveSettings()">💾 Save Settings</button>
+  </div>
+</div>
+
+<!-- PENDING SUBMISSIONS ALERT -->
+{% if stats.pending > 0 %}
+<div class="ann-banner" style="margin-bottom: 1.5rem;">
+  <div><strong>⚠️ {{ stats.pending }} pending submissions</strong> awaiting your review!</div>
+  <a href="/admin/submissions?status=Pending" class="btn btn-primary btn-sm">Review Now →</a>
+</div>
+{% endif %}
+
+<!-- RECENT SUBMISSIONS -->
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div class="card-title">Recent Submissions (Live)</div>
+    <a href="/admin/submissions" class="btn btn-outline btn-sm">View All →</a>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Team</th><th>Problem</th><th>Lang</th><th>Status</th><th>Score</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      {% for s in recent_subs %}
+      <tr>
+        <td class="mono" style="font-size: 0.75rem; color: var(--muted)">{{ s.submitted_at[11:16] }}</td>
+        <td><strong>{{ s.team_name }}</strong></td>
+        <td>{{ s.prob_title[:30] }}</td>
+        <td><span class="badge badge-blue">{{ s.language }}</span></td>
+        <td>
+          {% if s.status == 'Accepted' %}<span class="badge badge-green">AC</span>
+          {% elif s.status == 'Wrong Answer' %}<span class="badge badge-red">WA</span>
+          {% elif s.status == 'Pending' %}<span class="badge badge-gold">PENDING</span>
+          {% else %}<span class="badge badge-muted">{{ s.status }}</span>{% endif %}
+        </td>
+        <td class="mono" style="color: var(--gold)">{{ s.score }}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="openJudge({{ s.id }}, '{{ s.prob_title }}', '{{ s.team_name }}', '{{ s.language }}', `{{ s.code|replace('`','\\`')|replace('\n','\\n') }}`)">Judge</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Announce Modal -->
+<div id="announce-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">📢 Send Announcement</div>
+    <button class="modal-close" onclick="document.getElementById('announce-modal').classList.remove('show')">✕</button>
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input class="form-input" id="ann-title-input" placeholder="Announcement title">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Message</label>
+      <textarea class="form-textarea" id="ann-msg-input" placeholder="Your message..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-select" id="ann-type">
+        <option value="info">Info</option>
+        <option value="warning">Warning</option>
+        <option value="alert">Alert</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="sendAnnouncement()">Send to All Teams</button>
+  </div>
+</div>
+
+<!-- Judge Modal -->
+<div id="judge-modal" class="modal-overlay">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-title" id="judge-title">Review Submission</div>
+    <button class="modal-close" onclick="document.getElementById('judge-modal').classList.remove('show')">✕</button>
+    <div id="judge-meta" style="margin-bottom: 1rem; color: var(--muted); font-size: 0.85rem;"></div>
+    <div style="margin-bottom: 1rem;">
+      <label class="form-label">Submitted Code</label>
+      <div class="code-block" id="judge-code"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Verdict</label>
+        <select class="form-select" id="judge-verdict">
+          <option value="Accepted">✓ Accepted</option>
+          <option value="Wrong Answer">✗ Wrong Answer</option>
+          <option value="Partial">◑ Partial Credit</option>
+          <option value="Pending">⏳ Keep Pending</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Points to Award</label>
+        <input class="form-input" id="judge-score" type="number" min="0" value="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Admin Notes (visible to team)</label>
+      <input class="form-input" id="judge-notes" placeholder="Optional feedback...">
+    </div>
+    <button class="btn btn-primary" onclick="submitJudgment()">⚡ Submit Verdict</button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSubId = null;
+
+async function contestControl(action) {
+  const res = await fetch('/admin/contest/control', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action})
+  });
+  const data = await res.json();
+  if (data.success) {
+    showToast('✓ ' + action.toUpperCase() + ' executed', 'success');
+    const el = document.getElementById('live-status');
+    const status = data.status || action;
+    el.textContent = status.toUpperCase();
+    el.className = status === 'active' ? 'badge badge-green' : 'badge badge-gold';
+  }
+}
+
+async function saveSettings() {
+  const data = {
+    action: 'update_settings',
+    event_name: document.getElementById('ev-name').value,
+    event_tagline: document.getElementById('ev-tagline').value,
+    contest_start: document.getElementById('ev-start').value,
+    contest_end: document.getElementById('ev-end').value,
+  };
+  const res = await fetch('/admin/contest/control', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  const d = await res.json();
+  showToast(d.success ? '✓ Settings saved' : '✗ Error', d.success ? 'success' : 'error');
+}
+
+function showAnnounceModal() {
+  document.getElementById('announce-modal').classList.add('show');
+}
+
+async function sendAnnouncement() {
+  const title = document.getElementById('ann-title-input').value;
+  const message = document.getElementById('ann-msg-input').value;
+  const type = document.getElementById('ann-type').value;
+  if (!title || !message) return showToast('Fill all fields', 'error');
+  const res = await fetch('/admin/announce', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({title, message, type})
+  });
+  const data = await res.json();
+  document.getElementById('announce-modal').classList.remove('show');
+  showToast('✓ Announcement sent!', 'success');
+}
+
+function openJudge(sid, prob, team, lang, code) {
+  currentSubId = sid;
+  document.getElementById('judge-title').textContent = `Judge: ${prob}`;
+  document.getElementById('judge-meta').textContent = `Team: ${team} | Language: ${lang} | Sub ID: #${sid}`;
+  document.getElementById('judge-code').textContent = code.replace(/\\n/g, '\n');
+  document.getElementById('judge-modal').classList.add('show');
+}
+
+async function submitJudgment() {
+  const status = document.getElementById('judge-verdict').value;
+  const score = document.getElementById('judge-score').value;
+  const notes = document.getElementById('judge-notes').value;
+  const res = await fetch(`/admin/submission/${currentSubId}/judge`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({status, score: parseInt(score), notes})
+  });
+  const data = await res.json();
+  document.getElementById('judge-modal').classList.remove('show');
+  showToast('✓ Verdict submitted!', 'success');
+  setTimeout(() => location.reload(), 1000);
+}
+
+// Auto-refresh submissions every 30s
+setInterval(() => location.reload(), 60000);
+</script>
+{% endblock %}

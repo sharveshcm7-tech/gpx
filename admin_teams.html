@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Team Management — Code Grand Prix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// TEAM_REGISTRY</small>
+    Team Management
+  </div>
+  <span class="badge badge-muted">{{ teams|length }} teams</span>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Team ID</th><th>Name</th><th>Members</th><th>Invite Code</th>
+        <th>Score</th><th>Status</th><th>Created</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in teams %}
+      <tr>
+        <td class="mono" style="color: var(--gold)">{{ t.team_code }}</td>
+        <td><strong>{{ t.name }}</strong></td>
+        <td class="mono">{{ t.member_count }}</td>
+        <td class="mono" style="color: var(--muted); font-size: 0.8rem">{{ t.invite_code }}</td>
+        <td class="mono" style="color: var(--gold)">{{ t.score }}</td>
+        <td>
+          {% if t.status == 'approved' %}<span class="badge badge-green">APPROVED</span>
+          {% elif t.status == 'pending' %}<span class="badge badge-gold">PENDING</span>
+          {% elif t.status == 'rejected' %}<span class="badge badge-red">REJECTED</span>
+          {% elif t.status == 'disqualified' %}<span class="badge badge-red">DISQUALIFIED</span>
+          {% else %}<span class="badge badge-muted">{{ t.status }}</span>{% endif %}
+        </td>
+        <td style="font-size: 0.8rem; color: var(--muted)">{{ t.created_at[:10] }}</td>
+        <td>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% if t.status == 'pending' %}
+            <button class="btn btn-primary btn-sm" onclick="teamAction({{ t.id }}, 'approve')">✓ Approve</button>
+            <button class="btn btn-danger btn-sm" onclick="teamAction({{ t.id }}, 'reject')">✗ Reject</button>
+            {% elif t.status == 'approved' %}
+            <button class="btn btn-danger btn-sm" onclick="teamAction({{ t.id }}, 'disqualify')">⛔ DQ</button>
+            {% elif t.status == 'rejected' %}
+            <button class="btn btn-primary btn-sm" onclick="teamAction({{ t.id }}, 'approve')">Re-approve</button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function teamAction(tid, action) {
+  const labels = {approve:'Approve', reject:'Reject', disqualify:'Disqualify'};
+  if (!confirm(`${labels[action]} this team?`)) return;
+  const res = await fetch(`/admin/team/${tid}/action`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action})
+  });
+  const data = await res.json();
+  showToast(data.success ? `✓ Team ${action}d` : '✗ Error', data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 800);
+}
+</script>
+{% endblock %}

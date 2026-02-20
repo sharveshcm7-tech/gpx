@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ 'Login' if page == 'login' else 'Register' }} — Code Grand Prix</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #E30022; --gold: #FFD700; --dark: #0A0A0F; --darker: #050508;
+  --panel: #0F0F1A; --border: #1a1a2e; --text: #E8E8F0; --muted: #666680; --green: #00FF88;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--darker); color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.bg-track {
+  position: fixed; inset: 0; z-index: 0;
+  background: 
+    radial-gradient(ellipse 60% 80% at 20% 50%, rgba(227,0,34,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 50%, rgba(255,215,0,0.04) 0%, transparent 60%);
+}
+.card {
+  position: relative; z-index: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--red);
+  padding: 3rem;
+  width: 100%; max-width: 440px;
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%);
+}
+.logo {
+  font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.9rem;
+  color: var(--red); letter-spacing: 3px; text-align: center;
+  text-decoration: none; display: block; margin-bottom: 0.5rem;
+}
+.logo span { color: var(--gold); }
+.title {
+  font-family: 'Orbitron', monospace; font-size: 1.6rem; font-weight: 900;
+  text-align: center; margin-bottom: 0.5rem;
+}
+.subtitle { color: var(--muted); text-align: center; font-size: 0.9rem; margin-bottom: 2rem; }
+.form-group { margin-bottom: 1.2rem; }
+label {
+  display: block; font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem; color: var(--muted); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}
+input {
+  width: 100%; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border); color: var(--text);
+  padding: 0.9rem 1rem; font-family: 'Rajdhani', sans-serif; font-size: 1rem;
+  outline: none; transition: border-color 0.2s;
+}
+input:focus { border-color: var(--red); }
+.btn {
+  width: 100%; background: var(--red); color: white;
+  border: none; padding: 1rem;
+  font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+  transition: all 0.2s; margin-top: 0.5rem;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.btn:hover { background: #ff1a3a; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(227,0,34,0.4); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.switch-link { text-align: center; margin-top: 1.5rem; color: var(--muted); font-size: 0.9rem; }
+.switch-link a { color: var(--gold); text-decoration: none; font-weight: 700; }
+.switch-link a:hover { color: var(--red); }
+.msg { padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; border-left: 3px solid; }
+.msg.success { border-color: var(--green); background: rgba(0,255,136,0.05); color: var(--green); }
+.msg.error { border-color: var(--red); background: rgba(227,0,34,0.05); color: #ff6680; }
+.tabs {
+  display: flex; margin-bottom: 2rem; border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1; padding: 0.75rem; background: none; border: none;
+  color: var(--muted); font-family: 'Orbitron', monospace; font-size: 0.75rem;
+  letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
+  transition: all 0.2s; border-bottom: 2px solid transparent;
+}
+.tab-btn.active { color: var(--text); border-bottom-color: var(--red); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.back-link {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  color: var(--muted); text-decoration: none; font-size: 0.85rem;
+  margin-bottom: 1.5rem; transition: color 0.2s;
+}
+.back-link:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="bg-track"></div>
+<div class="card">
+  <a href="/" class="logo">CODE <span>GP</span></a>
+
+  <div class="tabs">
+    <button class="tab-btn {{ 'active' if page == 'login' else '' }}" onclick="showTab('login')">Login</button>
+    <button class="tab-btn {{ 'active' if page == 'register' else '' }}" onclick="showTab('register')">Register</button>
+  </div>
+
+  <!-- LOGIN TAB -->
+  <div id="tab-login" class="tab-content {{ 'active' if page == 'login' else '' }}">
+    <div id="login-msg"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@university.edu">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn" onclick="doLogin()" id="login-btn">⚡ IGNITE ENGINE</button>
+    <p style="text-align:center; margin-top: 1rem; font-size: 0.8rem; color: var(--muted);">
+      Default admin: admin@grandprix.com / admin123
+    </p>
+  </div>
+
+  <!-- REGISTER TAB -->
+  <div id="tab-register" class="tab-content {{ 'active' if page == 'register' else '' }}">
+    <div id="reg-msg"></div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="reg-username" placeholder="speedracer42">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="you@university.edu">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="reg-pw" placeholder="min 6 characters" onkeydown="if(event.key==='Enter')doRegister()">
+    </div>
+    <button class="btn" onclick="doRegister()" id="reg-btn">🏎 JOIN THE RACE</button>
+  </div>
+</div>
+
+<script>
+function showTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 5000);
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const pw = document.getElementById('login-pw').value;
+  if (!email || !pw) return showMsg('login-msg', 'error', 'Fill all fields');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'AUTHENTICATING...';
+  const res = await fetch('/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password: pw})
+  });
+  const data = await res.json();
+  btn.disabled = false; btn.textContent = '⚡ IGNITE ENGINE';
+  if (data.success) {
+    showMsg('login-msg', 'success', '✓ Login successful! Redirecting...');
+    setTimeout(() => window.location.href = data.redirect, 800);
+  } else {
+    showMsg('login-msg', 'error', '✗ ' + data.message);
+  }
+}
+
+async function doRegister() {
+  const username = document.getElementById('reg-username').value;
+  const email = document.getElementById('reg-email').value;
+  const pw = document.getElementById('reg-pw').value;
+  if (!username || !email || !pw) return showMsg('reg-msg', 'error', 'Fill all fields');
+  if (pw.length < 6) return showMsg('reg-msg', 'error', 'Password must be 6+ characters');
+  const btn = document.getElementById('reg-btn');
+  btn.disabled = true; btn.textContent = 'REGISTERING...';
+  const res = await fetch('/register', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username, email, password: pw})
+  });
+  const data = await res.json();
+  btn.disabled = false; btn.textContent = '🏎 JOIN THE RACE';
+  if (data.success) {
+    showMsg('reg-msg', 'success', '✓ ' + data.message);
+    setTimeout(() => showTab('login'), 1500);
+  } else {
+    showMsg('reg-msg', 'error', '✗ ' + data.message);
+  }
+}
+</script>
+</body>
+</html>

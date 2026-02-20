@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Code Grand Prix{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #E30022; --gold: #FFD700; --dark: #0A0A0F; --darker: #050508;
+  --panel: #0F0F1A; --panel2: #141420; --border: #1a1a2e; --text: #E8E8F0;
+  --muted: #666680; --green: #00FF88; --blue: #00AAFF;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--darker); color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 16px; display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px; min-height: 100vh; position: fixed; left: 0; top: 0; bottom: 0; z-index: 50;
+  background: var(--panel); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.sidebar-logo {
+  padding: 1.5rem;
+  font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.85rem;
+  color: var(--red); letter-spacing: 3px; text-decoration: none;
+  border-bottom: 1px solid var(--border); display: block;
+}
+.sidebar-logo span { color: var(--gold); }
+.sidebar-user {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.sidebar-user .uname { font-weight: 700; }
+.sidebar-user .urole {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 1px;
+  color: var(--red); text-transform: uppercase;
+}
+.sidebar-nav { flex: 1; padding: 1rem 0; }
+.sidebar-section {
+  padding: 0.5rem 1.5rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+  margin-top: 0.5rem;
+}
+.sidebar-link {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 1.5rem;
+  color: var(--muted); text-decoration: none;
+  font-weight: 600; font-size: 0.9rem;
+  transition: all 0.2s; border-left: 3px solid transparent;
+}
+.sidebar-link:hover, .sidebar-link.active {
+  color: var(--text); background: rgba(227,0,34,0.08);
+  border-left-color: var(--red);
+}
+.sidebar-link .icon { font-size: 1rem; width: 20px; text-align: center; }
+.sidebar-bottom {
+  padding: 1rem 1.5rem; border-top: 1px solid var(--border);
+}
+.contest-status {
+  padding: 0.5rem 1rem; margin-bottom: 0.75rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+  text-transform: uppercase; text-align: center; border: 1px solid;
+}
+.status-active { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.05); }
+.status-upcoming { color: var(--gold); border-color: var(--gold); background: rgba(255,215,0,0.05); }
+.status-ended { color: var(--muted); border-color: var(--muted); background: transparent; }
+.status-paused { color: var(--blue); border-color: var(--blue); background: rgba(0,170,255,0.05); }
+.btn-logout {
+  display: block; width: 100%; padding: 0.6rem;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'Rajdhani', sans-serif; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s; text-align: center; text-decoration: none;
+}
+.btn-logout:hover { border-color: var(--red); color: var(--text); }
+
+/* MAIN */
+.main { margin-left: 220px; flex: 1; padding: 2rem; min-height: 100vh; }
+.page-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 2rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.page-title {
+  font-family: 'Orbitron', monospace; font-size: 1.4rem; font-weight: 900;
+}
+.page-title small {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+  color: var(--red); letter-spacing: 3px; display: block; margin-bottom: 0.25rem;
+}
+
+/* CARDS */
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+.card-title {
+  font-family: 'Orbitron', monospace; font-size: 0.85rem; font-weight: 700;
+  color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+/* GRID LAYOUTS */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+/* STAT CARDS */
+.stat-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-left: 3px solid var(--red); padding: 1.2rem 1.5rem;
+}
+.stat-num {
+  font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900;
+  color: var(--red); line-height: 1;
+}
+.stat-label { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; font-weight: 600; }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; }
+th {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+  color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+  padding: 0.75rem 1rem; text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+td { padding: 0.8rem 1rem; border-bottom: 1px solid rgba(26,26,46,0.5); font-size: 0.95rem; }
+tr:hover td { background: rgba(227,0,34,0.03); }
+
+/* STATUS BADGES */
+.badge {
+  display: inline-block; padding: 0.2rem 0.6rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+  letter-spacing: 1px; text-transform: uppercase;
+  border: 1px solid;
+}
+.badge-green { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.08); }
+.badge-red { color: #ff4466; border-color: #ff4466; background: rgba(255,68,102,0.08); }
+.badge-gold { color: var(--gold); border-color: var(--gold); background: rgba(255,215,0,0.08); }
+.badge-blue { color: var(--blue); border-color: var(--blue); background: rgba(0,170,255,0.08); }
+.badge-muted { color: var(--muted); border-color: var(--muted); background: transparent; }
+
+/* BUTTONS */
+.btn {
+  display: inline-block; padding: 0.5rem 1.2rem;
+  font-family: 'Orbitron', monospace; font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+  border: none; text-decoration: none; transition: all 0.2s;
+}
+.btn-primary { background: var(--red); color: white; }
+.btn-primary:hover { background: #ff1a3a; transform: translateY(-1px); }
+.btn-gold { background: var(--gold); color: var(--darker); }
+.btn-gold:hover { background: #ffe84d; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-outline:hover { border-color: var(--text); color: var(--text); }
+.btn-sm { padding: 0.3rem 0.8rem; font-size: 0.65rem; }
+.btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
+.btn-danger:hover { background: var(--red); color: white; }
+
+/* FORM ELEMENTS */
+.form-group { margin-bottom: 1rem; }
+.form-label {
+  display: block; font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem; color: var(--muted); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 0.35rem;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  color: var(--text); padding: 0.75rem 1rem;
+  font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--red); }
+.form-textarea { resize: vertical; min-height: 120px; }
+.form-select option { background: var(--panel); }
+
+/* DIFFICULTY */
+.diff-easy { color: var(--green); font-weight: 700; }
+.diff-medium { color: var(--gold); font-weight: 700; }
+.diff-hard { color: var(--red); font-weight: 700; }
+
+/* NOTIFICATIONS */
+.toast {
+  position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+  padding: 1rem 1.5rem; min-width: 280px;
+  border-left: 4px solid; font-size: 0.9rem;
+  transform: translateX(400px); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  background: var(--panel); border-right: 1px solid var(--border); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.toast.show { transform: translateX(0); }
+.toast.success { border-left-color: var(--green); }
+.toast.error { border-left-color: var(--red); }
+.toast.info { border-left-color: var(--blue); }
+
+/* ANNOUNCEMENT BANNER */
+.ann-banner {
+  background: rgba(227,0,34,0.1); border: 1px solid rgba(227,0,34,0.3);
+  border-left: 4px solid var(--red); padding: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;
+}
+.ann-banner strong { color: var(--red); margin-right: 0.5rem; }
+
+/* MONO CODE */
+.mono { font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; }
+.code-block {
+  background: rgba(0,0,0,0.4); padding: 1rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
+  white-space: pre-wrap; color: #aaf; border: 1px solid var(--border);
+  max-height: 300px; overflow-y: auto;
+}
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--panel); border: 1px solid var(--border);
+  border-top: 3px solid var(--red); padding: 2rem;
+  width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+  position: relative;
+}
+.modal-title {
+  font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 900;
+  margin-bottom: 1.5rem;
+}
+.modal-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: none; border: none; color: var(--muted);
+  font-size: 1.5rem; cursor: pointer; padding: 0.25rem;
+}
+.modal-close:hover { color: var(--text); }
+
+@media (max-width: 900px) {
+  .sidebar { width: 60px; }
+  .sidebar-logo, .sidebar-user, .sidebar-section, .sidebar-link span, .sidebar-bottom { display: none; }
+  .main { margin-left: 60px; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="sidebar">
+  <a href="/" class="sidebar-logo">CODE <span>GP</span></a>
+  <div class="sidebar-user">
+    <div class="uname">{{ session.username }}</div>
+    <div class="urole">{{ session.role }}</div>
+  </div>
+  <nav class="sidebar-nav">
+    {% if session.role == 'admin' %}
+    <div class="sidebar-section">// Admin</div>
+    <a href="/admin" class="sidebar-link {% if request.path == '/admin' %}active{% endif %}">
+      <span class="icon">⚡</span><span>Dashboard</span>
+    </a>
+    <a href="/admin/teams" class="sidebar-link {% if request.path.startswith('/admin/team') %}active{% endif %}">
+      <span class="icon">👥</span><span>Teams</span>
+    </a>
+    <a href="/admin/problems" class="sidebar-link {% if request.path.startswith('/admin/problem') %}active{% endif %}">
+      <span class="icon">🎯</span><span>Problems</span>
+    </a>
+    <a href="/admin/submissions" class="sidebar-link {% if request.path.startswith('/admin/submission') %}active{% endif %}">
+      <span class="icon">📤</span><span>Submissions</span>
+    </a>
+    <a href="/admin/clarifications" class="sidebar-link {% if request.path.startswith('/admin/clarification') %}active{% endif %}">
+      <span class="icon">💬</span><span>Clarifications</span>
+    </a>
+    <a href="/admin/analytics" class="sidebar-link {% if request.path == '/admin/analytics' %}active{% endif %}">
+      <span class="icon">📊</span><span>Analytics</span>
+    </a>
+    <a href="/leaderboard" class="sidebar-link {% if request.path == '/leaderboard' %}active{% endif %}">
+      <span class="icon">📈</span><span>Standings</span>
+    </a>
+    {% else %}
+    <div class="sidebar-section">// Race</div>
+    <a href="/dashboard" class="sidebar-link {% if request.path == '/dashboard' %}active{% endif %}">
+      <span class="icon">🏠</span><span>Dashboard</span>
+    </a>
+    <a href="/contest" class="sidebar-link {% if request.path == '/contest' or request.path.startswith('/problem') %}active{% endif %}">
+      <span class="icon">🎯</span><span>Problems</span>
+    </a>
+    <a href="/submissions" class="sidebar-link {% if request.path == '/submissions' %}active{% endif %}">
+      <span class="icon">📤</span><span>Submissions</span>
+    </a>
+    <a href="/leaderboard" class="sidebar-link {% if request.path == '/leaderboard' %}active{% endif %}">
+      <span class="icon">🏆</span><span>Standings</span>
+    </a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-bottom">
+    <div id="sidebar-status" class="contest-status status-upcoming">UPCOMING</div>
+    <a href="/logout" class="btn-logout">⏻ Logout</a>
+  </div>
+</div>
+
+<main class="main">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+async function checkStatus() {
+  try {
+    const res = await fetch('/api/contest/status');
+    const data = await res.json();
+    const el = document.getElementById('sidebar-status');
+    const cls = {'active':'status-active','upcoming':'status-upcoming','ended':'status-ended','paused':'status-paused'}[data.status] || 'status-upcoming';
+    el.className = `contest-status ${cls}`;
+    el.textContent = data.status.toUpperCase();
+  } catch(e) {}
+}
+checkStatus();
+setInterval(checkStatus, 30000);
+
+// Poll announcements
+let lastAnnId = 0;
+async function checkAnnouncements() {
+  const res = await fetch('/api/announcements');
+  const data = await res.json();
+  if (data.length && data[0].id !== lastAnnId) {
+    lastAnnId = data[0].id;
+    showToast('📢 ' + data[0].title + ': ' + data[0].message, 'info');
+  }
+}
+setInterval(checkAnnouncements, 20000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

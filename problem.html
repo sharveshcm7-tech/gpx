@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}{{ problem.title }} — Code Grand Prix{% endblock %}
+
+{% block extra_head %}
+<style>
+.problem-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); }
+.problem-panel { display: flex; flex-direction: column; overflow: hidden; }
+.problem-scroll { flex: 1; overflow-y: auto; padding-right: 0.5rem; }
+.problem-scroll::-webkit-scrollbar { width: 4px; }
+.problem-scroll::-webkit-scrollbar-track { background: var(--darker); }
+.problem-scroll::-webkit-scrollbar-thumb { background: var(--border); }
+.problem-header { margin-bottom: 1.5rem; }
+.problem-title { font-family: 'Orbitron', monospace; font-size: 1.4rem; font-weight: 900; margin-bottom: 0.5rem; }
+.problem-meta { display: flex; gap: 1rem; align-items: center; }
+.problem-body h3 { font-family: 'Orbitron', monospace; font-size: 0.75rem; letter-spacing: 2px; color: var(--muted); margin: 1.5rem 0 0.75rem; }
+.problem-body p { color: var(--text); line-height: 1.8; font-size: 0.95rem; }
+.sample-box { background: rgba(0,0,0,0.4); padding: 1rem; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; margin-top: 0.5rem; border: 1px solid var(--border); white-space: pre-wrap; }
+.editor-panel { display: flex; flex-direction: column; }
+#monaco-editor { flex: 1; min-height: 400px; border: 1px solid var(--border); }
+.editor-toolbar { display: flex; gap: 1rem; align-items: center; padding: 0.75rem; background: var(--panel); border: 1px solid var(--border); border-bottom: none; }
+.editor-bottom { padding: 0.75rem; background: var(--panel); border: 1px solid var(--border); border-top: 1px solid rgba(227,0,34,0.2); }
+.lang-select { background: var(--panel2); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.75rem; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; outline: none; }
+.submit-btn {
+  background: var(--red); color: white; border: none;
+  padding: 0.65rem 2rem; font-family: 'Orbitron', monospace; font-size: 0.75rem;
+  font-weight: 700; letter-spacing: 2px; cursor: pointer;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  transition: all 0.2s;
+}
+.submit-btn:hover { background: #ff1a3a; }
+.verdict { margin-top: 0.75rem; padding: 0.75rem 1rem; font-size: 0.9rem; border-left: 3px solid; }
+.verdict-pending { border-color: var(--gold); background: rgba(255,215,0,0.05); color: var(--gold); }
+.verdict-accepted { border-color: var(--green); background: rgba(0,255,136,0.05); color: var(--green); }
+.verdict-wrong { border-color: var(--red); background: rgba(227,0,34,0.05); color: #ff6680; }
+.past-subs { max-height: 250px; overflow-y: auto; }
+.past-subs table { font-size: 0.85rem; }
+.clarify-section { margin-top: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 1rem;">
+  <div style="display: flex; align-items: center; gap: 1rem;">
+    <a href="/contest" class="btn btn-outline btn-sm">← Back</a>
+    <div>
+      <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 2px;">{{ problem.category|upper }}</div>
+      <div style="font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 900;">{{ problem.title }}</div>
+    </div>
+  </div>
+  <div style="display: flex; gap: 1rem; align-items: center;">
+    <span class="diff-{{ problem.difficulty|lower }}">{{ problem.difficulty }}</span>
+    <span class="mono" style="color: var(--gold)">{{ problem.points }} pts</span>
+  </div>
+</div>
+
+<div class="problem-layout">
+  <!-- LEFT: Problem Description -->
+  <div class="problem-panel card" style="padding: 1.5rem;">
+    <div class="problem-scroll">
+      <div class="problem-body">
+        <h3>// PROBLEM STATEMENT</h3>
+        <p>{{ problem.description }}</p>
+
+        {% if problem.constraints %}
+        <h3>// CONSTRAINTS</h3>
+        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; color: var(--muted);">{{ problem.constraints }}</p>
+        {% endif %}
+
+        {% if problem.sample_input %}
+        <h3>// SAMPLE INPUT</h3>
+        <div class="sample-box">{{ problem.sample_input }}</div>
+        {% endif %}
+
+        {% if problem.sample_output %}
+        <h3>// SAMPLE OUTPUT</h3>
+        <div class="sample-box">{{ problem.sample_output }}</div>
+        {% endif %}
+      </div>
+
+      <!-- Past Submissions -->
+      {% if past_submissions %}
+      <div style="margin-top: 2rem;">
+        <h3 style="font-family: 'Orbitron', monospace; font-size: 0.75rem; letter-spacing: 2px; color: var(--muted); margin-bottom: 0.75rem;">// PAST SUBMISSIONS</h3>
+        <div class="past-subs">
+          <table>
+            <thead><tr><th>Time</th><th>Language</th><th>Status</th><th>Score</th></tr></thead>
+            <tbody>
+              {% for s in past_submissions %}
+              <tr>
+                <td class="mono" style="font-size: 0.75rem; color: var(--muted)">{{ s.submitted_at[11:16] }}</td>
+                <td class="mono">{{ s.language }}</td>
+                <td>
+                  {% if s.status == 'Accepted' %}<span class="badge badge-green">AC</span>
+                  {% elif s.status == 'Wrong Answer' %}<span class="badge badge-red">WA</span>
+                  {% elif s.status == 'Pending' %}<span class="badge badge-gold">PENDING</span>
+                  {% else %}<span class="badge badge-muted">{{ s.status[:3] }}</span>{% endif %}
+                </td>
+                <td class="mono" style="color: var(--gold)">{{ s.score }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Clarifications -->
+      <div class="clarify-section">
+        <h3 style="font-family: 'Orbitron', monospace; font-size: 0.75rem; letter-spacing: 2px; color: var(--muted); margin-bottom: 0.75rem;">// CLARIFICATIONS</h3>
+        {% for c in clarifications %}
+        <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+          <div style="font-size: 0.85rem; color: var(--text); margin-bottom: 0.25rem;">❓ {{ c.question }}</div>
+          {% if c.answer %}<div style="font-size: 0.85rem; color: var(--green); margin-top: 0.25rem;">✓ {{ c.answer }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        {% if team %}
+        <div style="display: flex; gap: 0.75rem; margin-top: 0.75rem;">
+          <input class="form-input" id="clarify-q" placeholder="Ask a question...">
+          <button class="btn btn-outline btn-sm" onclick="askClarification()">Ask</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Code Editor -->
+  <div class="editor-panel">
+    <div class="editor-toolbar">
+      <select class="lang-select" id="lang-select" onchange="changeLang()">
+        <option value="python">Python 3</option>
+        <option value="cpp">C++</option>
+        <option value="java">Java</option>
+        <option value="javascript">JavaScript</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="clearEditor()">Clear</button>
+      <div style="flex: 1"></div>
+      {% if team %}
+      <button class="submit-btn" id="submit-btn" onclick="submitSolution()">⚡ SUBMIT</button>
+      {% else %}
+      <span style="color: var(--muted); font-size: 0.85rem;">Join a team to submit</span>
+      {% endif %}
+    </div>
+
+    <div id="monaco-editor"></div>
+
+    <div class="editor-bottom">
+      <div id="verdict-area"></div>
+      <div style="color: var(--muted); font-size: 0.75rem; font-family: 'Share Tech Mono', monospace;">
+        Tip: Solutions are reviewed by admin. Verdicts may take a few minutes.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Monaco Editor CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<script>
+let editor;
+const defaultCode = {
+  python: `# Write your solution here\ndef solve():\n    # Your code here\n    pass\n\nsolve()`,
+  cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // Your code here\n    return 0;\n}`,
+  java: `import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // Your code here\n    }\n}`,
+  javascript: `// Write your solution here\nfunction solve() {\n    // Your code here\n}\n\nsolve();`
+};
+
+require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+require(['vs/editor/editor.main'], function() {
+  monaco.editor.defineTheme('grandprix', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      {token: 'comment', foreground: '666680'},
+      {token: 'keyword', foreground: 'E30022'},
+      {token: 'string', foreground: 'FFD700'},
+      {token: 'number', foreground: '00FF88'},
+    ],
+    colors: {
+      'editor.background': '#050508',
+      'editor.lineHighlightBackground': '#0F0F1A',
+      'editorLineNumber.foreground': '#1a1a2e',
+      'editorCursor.foreground': '#E30022',
+      'editor.selectionBackground': '#1a1a2e',
+    }
+  });
+  editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+    value: defaultCode.python,
+    language: 'python',
+    theme: 'grandprix',
+    fontSize: 14,
+    fontFamily: "'Share Tech Mono', monospace",
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    padding: { top: 12 },
+    lineNumbers: 'on',
+  });
+});
+
+function changeLang() {
+  const lang = document.getElementById('lang-select').value;
+  const monacoLang = {python:'python',cpp:'cpp',java:'java',javascript:'javascript'}[lang];
+  if (editor) {
+    monaco.editor.setModelLanguage(editor.getModel(), monacoLang);
+    if (!editor.getValue().trim()) editor.setValue(defaultCode[lang]);
+  }
+}
+
+function clearEditor() {
+  const lang = document.getElementById('lang-select').value;
+  if (editor) editor.setValue(defaultCode[lang]);
+}
+
+async function submitSolution() {
+  if (!editor) return;
+  const code = editor.getValue().trim();
+  if (!code) return showToast('Write your solution first!', 'error');
+  const lang = document.getElementById('lang-select').value;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'SUBMITTING...';
+  
+  const res = await fetch('/submit', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({problem_id: {{ problem.id }}, code, language: lang})
+  });
+  const data = await res.json();
+  btn.disabled = false; btn.textContent = '⚡ SUBMIT';
+  
+  const va = document.getElementById('verdict-area');
+  if (data.success) {
+    va.innerHTML = '<div class="verdict verdict-pending">⏳ Solution submitted! Admin is reviewing... Check back soon.</div>';
+    showToast('Solution submitted!', 'success');
+  } else {
+    va.innerHTML = `<div class="verdict verdict-wrong">✗ ${data.message}</div>`;
+    showToast(data.message, 'error');
+  }
+}
+
+async function askClarification() {
+  const q = document.getElementById('clarify-q').value.trim();
+  if (!q) return;
+  const res = await fetch('/clarify', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({problem_id: {{ problem.id }}, question: q})
+  });
+  const data = await res.json();
+  showToast(data.message, data.success ? 'success' : 'error');
+  if (data.success) document.getElementById('clarify-q').value = '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% block title %}Leaderboard — Code Grand Prix{% endblock %}
+
+{% block extra_head %}
+<style>
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 1.5rem; margin-bottom: 3rem; }
+.podium-slot { text-align: center; position: relative; }
+.podium-block {
+  padding: 1rem 2rem; background: var(--panel);
+  border: 1px solid var(--border); position: relative; overflow: hidden;
+}
+.podium-block::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.pos1 .podium-block { min-height: 120px; }
+.pos2 .podium-block { min-height: 90px; }
+.pos3 .podium-block { min-height: 70px; }
+.pos1 .podium-block::before { background: var(--gold); }
+.pos2 .podium-block::before { background: #aaa; }
+.pos3 .podium-block::before { background: #cd7f32; }
+.podium-rank { font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900; }
+.pos1 .podium-rank { color: var(--gold); }
+.pos2 .podium-rank { color: #aaa; }
+.pos3 .podium-rank { color: #cd7f32; }
+.podium-name { font-weight: 700; font-size: 1rem; margin-top: 0.5rem; }
+.podium-score { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--muted); }
+
+.lb-row-1 td { background: rgba(255,215,0,0.05); }
+.lb-row-2 td { background: rgba(170,170,170,0.05); }
+.lb-row-3 td { background: rgba(205,127,50,0.05); }
+
+.rank-num { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 900; }
+.rank-1 { color: var(--gold); }
+.rank-2 { color: #aaa; }
+.rank-3 { color: #cd7f32; }
+
+.frozen-banner {
+  background: rgba(0,170,255,0.1); border: 1px solid var(--blue);
+  padding: 0.75rem 1.5rem; margin-bottom: 1.5rem;
+  text-align: center; font-family: 'Orbitron', monospace;
+  font-size: 0.8rem; color: var(--blue); letter-spacing: 2px;
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+.score-bar {
+  height: 4px; background: var(--border); margin-top: 0.25rem; border-radius: 2px; overflow: hidden;
+}
+.score-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); transition: width 1s ease; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// RACE_STANDINGS</small>
+    Grand Prix Leaderboard
+  </div>
+  <div style="display: flex; gap: 1rem; align-items: center;">
+    <button class="btn btn-outline btn-sm" onclick="loadLeaderboard()">⟳ Refresh</button>
+    {% if session.role == 'admin' %}
+    <a href="/admin/leaderboard/export" class="btn btn-gold btn-sm">⬇ Export CSV</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if frozen %}
+<div class="frozen-banner">🧊 LEADERBOARD FROZEN — FINAL STANDINGS PENDING REVEAL</div>
+{% endif %}
+
+<!-- PODIUM -->
+<div id="podium-area"></div>
+
+<!-- FULL TABLE -->
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div class="card-title">Full Standings</div>
+    <div id="auto-refresh-info" style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--muted);"></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Team</th>
+        <th>Team ID</th>
+        <th>Score</th>
+        <th>Solved</th>
+        <th>Penalty</th>
+        <th>Points Bar</th>
+      </tr>
+    </thead>
+    <tbody id="lb-body">
+      <tr><td colspan="7" style="text-align:center; color: var(--muted); padding: 2rem;">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let maxScore = 1;
+let refreshTimer;
+
+async function loadLeaderboard() {
+  const res = await fetch('/api/leaderboard');
+  const teams = await res.json();
+  
+  if (teams.length) maxScore = Math.max(...teams.map(t => t.score)) || 1;
+  
+  // Podium
+  const podiumArea = document.getElementById('podium-area');
+  if (teams.length >= 1) {
+    const t1 = teams[0], t2 = teams[1] || null, t3 = teams[2] || null;
+    podiumArea.innerHTML = `
+      <div class="podium">
+        ${t2 ? `<div class="podium-slot pos2">
+          <div class="podium-block">
+            <div class="podium-rank">🥈</div>
+            <div class="podium-name">${t2.name}</div>
+            <div class="podium-score">${t2.score}pts · ${t2.solved} solved</div>
+          </div>
+        </div>` : ''}
+        <div class="podium-slot pos1">
+          <div class="podium-block">
+            <div class="podium-rank">🥇</div>
+            <div class="podium-name">${t1.name}</div>
+            <div class="podium-score">${t1.score}pts · ${t1.solved} solved</div>
+          </div>
+        </div>
+        ${t3 ? `<div class="podium-slot pos3">
+          <div class="podium-block">
+            <div class="podium-rank">🥉</div>
+            <div class="podium-name">${t3.name}</div>
+            <div class="podium-score">${t3.score}pts · ${t3.solved} solved</div>
+          </div>
+        </div>` : ''}
+      </div>
+    `;
+  } else {
+    podiumArea.innerHTML = '';
+  }
+  
+  // Table
+  const tbody = document.getElementById('lb-body');
+  if (!teams.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--muted); padding: 3rem;">No approved teams yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = teams.map((t, i) => {
+    const rank = i + 1;
+    const rankCls = rank <= 3 ? `rank-${rank}` : '';
+    const rowCls = rank <= 3 ? `lb-row-${rank}` : '';
+    const pct = maxScore > 0 ? (t.score / maxScore * 100) : 0;
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+    return `
+      <tr class="${rowCls}">
+        <td><span class="rank-num ${rankCls}">${medal || rank}</span></td>
+        <td><strong>${t.name}</strong></td>
+        <td class="mono" style="color: var(--muted); font-size: 0.8rem">${t.team_code}</td>
+        <td class="mono" style="color: var(--gold); font-size: 1.1rem; font-weight: 700">${t.score}</td>
+        <td class="mono">${t.solved}</td>
+        <td class="mono" style="color: var(--muted)">${t.penalty}m</td>
+        <td style="min-width: 100px">
+          <div class="score-bar">
+            <div class="score-fill" style="width: ${pct}%"></div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  const now = new Date().toLocaleTimeString();
+  document.getElementById('auto-refresh-info').textContent = `Last updated: ${now}`;
+}
+
+loadLeaderboard();
+refreshTimer = setInterval(loadLeaderboard, 15000);
+
+// Countdown to next refresh
+let countdown = 15;
+setInterval(() => {
+  countdown--;
+  if (countdown <= 0) countdown = 15;
+  const el = document.getElementById('auto-refresh-info');
+  if (el.textContent.includes('Last updated')) {
+    // Don't overwrite, just append
+  }
+}, 1000);
+</script>
+{% endblock %}

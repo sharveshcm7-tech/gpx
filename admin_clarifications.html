@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Clarifications — Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// TEAM_COMMS</small>
+    Clarifications
+  </div>
+  <span class="badge badge-muted">{{ clarifications|length }} questions</span>
+</div>
+
+{% if clarifications %}
+{% for c in clarifications %}
+<div class="card" style="margin-bottom: 1rem; border-left: 3px solid {{ 'var(--green)' if c.answer else 'var(--gold)' }};">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+    <div>
+      <span class="badge {{ 'badge-green' if c.answer else 'badge-gold' }}">{{ '✓ ANSWERED' if c.answer else '⏳ PENDING' }}</span>
+      {% if c.is_public %}<span class="badge badge-blue" style="margin-left: 0.5rem;">🌐 PUBLIC</span>{% endif %}
+    </div>
+    <span class="mono" style="color: var(--muted); font-size: 0.75rem">{{ c.created_at[:16] }}</span>
+  </div>
+
+  <div style="margin-bottom: 0.75rem;">
+    <div style="font-size: 0.75rem; color: var(--muted); margin-bottom: 0.25rem; font-family: 'Share Tech Mono', monospace;">
+      TEAM: {{ c.team_name }} · USER: {{ c.username }}{% if c.prob_title %} · PROBLEM: {{ c.prob_title }}{% endif %}
+    </div>
+    <div style="font-size: 1rem; font-weight: 600;">❓ {{ c.question }}</div>
+  </div>
+
+  {% if c.answer %}
+  <div style="background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); padding: 0.75rem; margin-bottom: 0.75rem;">
+    <span style="color: var(--green); font-size: 0.8rem; font-family: 'Share Tech Mono', monospace;">ADMIN RESPONSE:</span>
+    <div style="margin-top: 0.25rem;">{{ c.answer }}</div>
+  </div>
+  {% endif %}
+
+  <div style="display: flex; gap: 0.75rem; align-items: flex-end; margin-top: 0.75rem;">
+    <div style="flex: 1;">
+      <textarea class="form-textarea" id="ans-{{ c.id }}" placeholder="Type your response..." style="min-height: 70px;">{{ c.answer or '' }}</textarea>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); cursor: pointer;">
+        <input type="checkbox" id="pub-{{ c.id }}" {{ 'checked' if c.is_public }}> Make Public
+      </label>
+      <button class="btn btn-primary btn-sm" onclick="sendAnswer({{ c.id }})">
+        {{ '⟳ Update' if c.answer else '✓ Answer' }}
+      </button>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card" style="text-align: center; padding: 4rem; color: var(--muted);">
+  <div style="font-size: 3rem; margin-bottom: 1rem;">💬</div>
+  <div style="font-family: 'Orbitron', monospace;">No questions from teams yet</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function sendAnswer(cid) {
+  const answer = document.getElementById('ans-' + cid).value.trim();
+  const is_public = document.getElementById('pub-' + cid).checked ? 1 : 0;
+  if (!answer) return showToast('Enter an answer', 'error');
+  const res = await fetch(`/admin/clarification/${cid}/answer`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({answer, is_public})
+  });
+  const data = await res.json();
+  showToast(data.success ? '✓ Answer sent to team!' : '✗ Error', data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 800);
+}
+</script>
+{% endblock %}

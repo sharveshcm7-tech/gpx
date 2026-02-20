@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Analytics — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+.bar { background: var(--border); height: 24px; border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); display: flex; align-items: center; padding-left: 8px; font-size: 0.75rem; font-family: 'Share Tech Mono', monospace; color: white; white-space: nowrap; transition: width 1s ease; }
+.chart-container { background: var(--panel2); padding: 1.5rem; border: 1px solid var(--border); }
+canvas { max-width: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// RACE_ANALYTICS</small>
+    Analytics & Reports
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <a href="/admin/leaderboard/export" class="btn btn-gold btn-sm">⬇ Export Leaderboard CSV</a>
+  </div>
+</div>
+
+<!-- Top Stats -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  <div class="stat-card">
+    <div class="stat-num">{{ total_subs }}</div>
+    <div class="stat-label">Total Submissions</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--green)">
+    <div class="stat-num" style="color: var(--green)">{{ accepted }}</div>
+    <div class="stat-label">Accepted</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--red)">
+    <div class="stat-num" style="color: var(--red)">{{ total_subs - accepted }}</div>
+    <div class="stat-label">Rejected</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--gold)">
+    <div class="stat-num" style="color: var(--gold)">{{ '%.0f'|format((accepted / total_subs * 100) if total_subs else 0) }}%</div>
+    <div class="stat-label">Acceptance Rate</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <!-- Most Solved Problems -->
+  <div class="card">
+    <div class="card-title">🏆 Most Solved Problems</div>
+    {% if most_solved %}
+    {% set max_c = most_solved[0].c %}
+    {% for p in most_solved %}
+    <div style="margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+        <span>{{ p.title[:35] }}</span>
+        <span class="mono" style="color: var(--gold)">{{ p.c }} teams</span>
+      </div>
+      <div class="bar">
+        <div class="bar-fill" style="width: {{ (p.c / max_c * 100)|round }}%">{{ p.c }} solves</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color: var(--muted);">No accepted solutions yet</p>
+    {% endif %}
+  </div>
+
+  <!-- Hardest Problems -->
+  <div class="card">
+    <div class="card-title">🔥 Hardest Problems (Most WA)</div>
+    {% if hardest %}
+    {% set max_w = hardest[0].wrong if hardest[0].wrong else 1 %}
+    {% for p in hardest %}
+    <div style="margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+        <span>{{ p.title[:35] }}</span>
+        <span class="mono" style="color: var(--red)">{{ p.wrong }} WA</span>
+      </div>
+      <div class="bar">
+        <div class="bar-fill" style="width: {{ (p.wrong / max_w * 100)|round if max_w else 0 }}%; background: linear-gradient(90deg, #E30022, #ff4466);">
+          {{ p.correct }} AC / {{ p.wrong }} WA
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color: var(--muted);">No data yet</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Team Performance -->
+<div class="card" style="margin-top: 1.5rem;">
+  <div class="card-title">📊 Team Performance</div>
+  {% if team_perf %}
+  <table>
+    <thead>
+      <tr><th>Rank</th><th>Team</th><th>Score</th><th>Solved</th><th>Performance Bar</th></tr>
+    </thead>
+    <tbody>
+      {% set max_score = team_perf[0].score if team_perf[0].score else 1 %}
+      {% for t in team_perf %}
+      <tr>
+        <td class="rank-num {{ 'rank-1' if loop.index==1 else ('rank-2' if loop.index==2 else ('rank-3' if loop.index==3 else '')) }}">
+          {{ '🥇' if loop.index==1 else ('🥈' if loop.index==2 else ('🥉' if loop.index==3 else loop.index)) }}
+        </td>
+        <td><strong>{{ t.name }}</strong></td>
+        <td class="mono" style="color: var(--gold)">{{ t.score }}</td>
+        <td class="mono">{{ t.solved }}</td>
+        <td style="min-width: 150px">
+          <div class="bar">
+            <div class="bar-fill" style="width: {{ (t.score / max_score * 100)|round if max_score else 0 }}%">{{ t.score }}</div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--muted); text-align: center; padding: 2rem;">No team data yet</p>
+  {% endif %}
+</div>
+{% endblock %}

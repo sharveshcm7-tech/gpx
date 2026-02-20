@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Code Grand Prix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// TEAM_PIT_STOP</small>
+    Race Dashboard
+  </div>
+  <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--muted);">
+    {{ settings.get('event_name','CODE GRAND PRIX') }}
+  </div>
+</div>
+
+<!-- ANNOUNCEMENTS -->
+{% for ann in announcements %}
+<div class="ann-banner" style="margin-bottom: 0.5rem;">
+  <div><strong>📢 {{ ann.title }}</strong> {{ ann.message }}</div>
+  <small class="mono" style="color: var(--muted)">{{ ann.created_at[:16] }}</small>
+</div>
+{% endfor %}
+
+{% if not team %}
+<!-- NO TEAM YET -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+  <div class="card">
+    <div class="card-title">🏎 Create Team</div>
+    <div class="form-group">
+      <label class="form-label">Team Name</label>
+      <input class="form-input" id="team-name" placeholder="Team Thunder">
+    </div>
+    <button class="btn btn-primary" onclick="createTeam()">Create Team</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🔗 Join Team</div>
+    <div class="form-group">
+      <label class="form-label">Invite Code</label>
+      <input class="form-input" id="invite-code" placeholder="XXXXXXXXXX">
+    </div>
+    <button class="btn btn-gold" onclick="joinTeam()">Join Team</button>
+  </div>
+</div>
+{% else %}
+
+<!-- TEAM INFO -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  <div class="stat-card">
+    <div class="stat-num">{{ team.score }}</div>
+    <div class="stat-label">Total Score</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--gold)">
+    <div class="stat-num" style="color: var(--gold)">{{ solved_ids|length }}</div>
+    <div class="stat-label">Problems Solved</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--blue)">
+    <div class="stat-num" style="color: var(--blue)">{{ team.penalty }}m</div>
+    <div class="stat-label">Penalty Time</div>
+  </div>
+  <div class="stat-card" style="border-left-color: var(--green)">
+    <div class="stat-num" style="color: var(--green)">—</div>
+    <div class="stat-label">Current Rank</div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 2rem;">
+  <div class="card">
+    <div class="card-title">🏎 Team Info</div>
+    <table>
+      <tr><td style="color: var(--muted); width: 120px">Name</td><td><strong>{{ team.name }}</strong></td></tr>
+      <tr><td style="color: var(--muted)">Team ID</td><td class="mono">{{ team.team_code }}</td></tr>
+      <tr><td style="color: var(--muted)">Invite Code</td><td class="mono">{{ team.invite_code }}</td></tr>
+      <tr><td style="color: var(--muted)">Status</td><td>
+        {% if team.status == 'approved' %}<span class="badge badge-green">APPROVED</span>
+        {% elif team.status == 'pending' %}<span class="badge badge-gold">PENDING</span>
+        {% else %}<span class="badge badge-red">{{ team.status|upper }}</span>{% endif %}
+      </td></tr>
+    </table>
+    {% if team.status == 'pending' %}
+    <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.2); font-size: 0.85rem; color: var(--muted);">
+      ⏳ Waiting for admin approval before you can submit solutions.
+    </div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-title">👥 Team Members</div>
+    {% for m in members %}
+    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+      <span>{{ m.username }}</span>
+      <span class="badge {% if m.role == 'leader' %}badge-gold{% else %}badge-muted{% endif %}">{{ m.role|upper }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- PROBLEMS PREVIEW -->
+<div class="card">
+  <div class="card-title">🎯 Available Problems</div>
+  {% if problems %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Problem</th><th>Category</th><th>Difficulty</th><th>Points</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in problems %}
+      <tr>
+        <td class="mono">{{ loop.index }}</td>
+        <td><strong>{{ p.title }}</strong></td>
+        <td><span class="badge badge-blue">{{ p.category }}</span></td>
+        <td><span class="diff-{{ p.difficulty|lower }}">{{ p.difficulty }}</span></td>
+        <td class="mono" style="color: var(--gold)">{{ p.points }}pts</td>
+        <td>
+          {% if p.id in solved_ids %}
+            <span class="badge badge-green">✓ SOLVED</span>
+          {% else %}
+            <span class="badge badge-muted">UNSOLVED</span>
+          {% endif %}
+        </td>
+        <td><a href="/problem/{{ p.id }}" class="btn btn-outline btn-sm">Solve →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--muted); text-align: center; padding: 2rem;">No problems visible yet. Race hasn't started!</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function createTeam() {
+  const name = document.getElementById('team-name').value.trim();
+  if (!name) return showToast('Enter team name', 'error');
+  const res = await fetch('/team/create', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name})
+  });
+  const data = await res.json();
+  showToast(data.message, data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 1000);
+}
+async function joinTeam() {
+  const invite_code = document.getElementById('invite-code').value.trim();
+  if (!invite_code) return showToast('Enter invite code', 'error');
+  const res = await fetch('/team/join', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({invite_code})
+  });
+  const data = await res.json();
+  showToast(data.message, data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 1000);
+}
+</script>
+{% endblock %}

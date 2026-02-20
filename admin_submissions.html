@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}Submissions — Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <small>// SUBMISSIONS_MONITOR</small>
+    Submissions
+  </div>
+  <button class="btn btn-outline btn-sm" onclick="location.reload()">⟳ Refresh</button>
+</div>
+
+<!-- FILTER BAR -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.5rem;">
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+    <div>
+      <label class="form-label">Team</label>
+      <input class="form-input" id="f-team" placeholder="Filter by team..." value="{{ team_filter }}" style="width: 180px;">
+    </div>
+    <div>
+      <label class="form-label">Problem</label>
+      <input class="form-input" id="f-prob" placeholder="Filter by problem..." value="{{ prob_filter }}" style="width: 180px;">
+    </div>
+    <div>
+      <label class="form-label">Status</label>
+      <select class="form-select" id="f-status" style="width: 160px;">
+        <option value="">All</option>
+        <option value="Pending" {{ 'selected' if status_filter == 'Pending' }}>Pending</option>
+        <option value="Accepted" {{ 'selected' if status_filter == 'Accepted' }}>Accepted</option>
+        <option value="Wrong Answer" {{ 'selected' if status_filter == 'Wrong Answer' }}>Wrong Answer</option>
+        <option value="Partial" {{ 'selected' if status_filter == 'Partial' }}>Partial</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="applyFilters()">Filter</button>
+    <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear</button>
+  </div>
+</div>
+
+<div class="card">
+  <div style="margin-bottom: 1rem;">
+    <span class="mono" style="color: var(--muted); font-size: 0.8rem;">{{ submissions|length }} submissions</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Team</th><th>Problem</th><th>User</th><th>Language</th><th>Status</th><th>Score</th><th>Time</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      {% for s in submissions %}
+      <tr>
+        <td class="mono" style="color: var(--muted)">#{{ s.id }}</td>
+        <td><strong>{{ s.team_name }}</strong></td>
+        <td style="font-size: 0.9rem">{{ s.prob_title[:25] }}</td>
+        <td style="color: var(--muted); font-size: 0.85rem">{{ s.username }}</td>
+        <td><span class="badge badge-blue">{{ s.language }}</span></td>
+        <td>
+          {% if s.status == 'Accepted' %}<span class="badge badge-green">✓ AC</span>
+          {% elif s.status == 'Wrong Answer' %}<span class="badge badge-red">✗ WA</span>
+          {% elif s.status == 'Pending' %}<span class="badge badge-gold">⏳ PENDING</span>
+          {% elif s.status == 'Partial' %}<span class="badge badge-blue">◑ PARTIAL</span>
+          {% else %}<span class="badge badge-muted">{{ s.status }}</span>{% endif %}
+        </td>
+        <td class="mono" style="color: var(--gold)">{{ s.score }}</td>
+        <td class="mono" style="font-size: 0.75rem; color: var(--muted)">{{ s.submitted_at[11:16] }}</td>
+        <td>
+          <button class="btn btn-{{ 'primary' if s.status == 'Pending' else 'outline' }} btn-sm"
+            onclick='openJudge({{ s.id }}, "{{ s.prob_title }}", "{{ s.team_name }}", "{{ s.language }}", `{{ s.code|replace("`","\\`")|replace("\n","\\n") }}`, {{ s.score }}, "{{ s.status }}")'>
+            {% if s.status == 'Pending' %}⚡ Judge{% else %}Edit{% endif %}
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Judge Modal -->
+<div id="judge-modal" class="modal-overlay">
+  <div class="modal" style="max-width: 750px;">
+    <div class="modal-title" id="judge-title">Review Submission</div>
+    <button class="modal-close" onclick="document.getElementById('judge-modal').classList.remove('show')">✕</button>
+    <div id="judge-meta" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--panel2); border: 1px solid var(--border); font-size: 0.85rem; color: var(--muted);"></div>
+    <div style="margin-bottom: 1.5rem;">
+      <label class="form-label">Submitted Code</label>
+      <div class="code-block" id="judge-code" style="max-height: 350px;"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Verdict</label>
+        <select class="form-select" id="judge-verdict">
+          <option value="Accepted">✓ Accepted</option>
+          <option value="Wrong Answer">✗ Wrong Answer</option>
+          <option value="Partial">◑ Partial Credit</option>
+          <option value="Pending">⏳ Keep Pending</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Points to Award</label>
+        <input class="form-input" id="judge-score" type="number" min="0" value="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Admin Notes (visible to team)</label>
+      <input class="form-input" id="judge-notes" placeholder="e.g., Correct approach, optimize time complexity">
+    </div>
+    <div style="display: flex; gap: 1rem;">
+      <button class="btn btn-primary" onclick="submitJudgment()">⚡ Submit Verdict</button>
+      <button class="btn btn-outline" onclick="document.getElementById('judge-modal').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSubId = null;
+
+function applyFilters() {
+  const team = document.getElementById('f-team').value;
+  const prob = document.getElementById('f-prob').value;
+  const status = document.getElementById('f-status').value;
+  const params = new URLSearchParams();
+  if (team) params.set('team', team);
+  if (prob) params.set('problem', prob);
+  if (status) params.set('status', status);
+  window.location.href = '/admin/submissions?' + params.toString();
+}
+
+function clearFilters() {
+  window.location.href = '/admin/submissions';
+}
+
+function openJudge(sid, prob, team, lang, code, score, status) {
+  currentSubId = sid;
+  document.getElementById('judge-title').textContent = `Judging: ${prob}`;
+  document.getElementById('judge-meta').innerHTML = `<strong>Team:</strong> ${team} &nbsp;|&nbsp; <strong>Language:</strong> ${lang} &nbsp;|&nbsp; <strong>Sub ID:</strong> #${sid}`;
+  document.getElementById('judge-code').textContent = code.replace(/\\n/g, '\n');
+  document.getElementById('judge-verdict').value = status === 'Pending' ? 'Accepted' : status;
+  document.getElementById('judge-score').value = score || 0;
+  document.getElementById('judge-modal').classList.add('show');
+}
+
+async function submitJudgment() {
+  const status = document.getElementById('judge-verdict').value;
+  const score = parseInt(document.getElementById('judge-score').value);
+  const notes = document.getElementById('judge-notes').value;
+  const res = await fetch(`/admin/submission/${currentSubId}/judge`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({status, score, notes})
+  });
+  const data = await res.json();
+  document.getElementById('judge-modal').classList.remove('show');
+  showToast(data.success ? '✓ Verdict submitted! Team score updated.' : '✗ Error', data.success ? 'success' : 'error');
+  if (data.success) setTimeout(() => location.reload(), 1000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+});
+</script>
+{% endblock %}
