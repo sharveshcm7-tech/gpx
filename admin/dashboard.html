@@ -1,0 +1,178 @@
+{% extends 'admin/base_admin.html' %}
+{% block title %}Admin Dashboard — Grand Prix{% endblock %}
+{% block admin_content %}
+<div class="page-header flex-between">
+  <div>
+    <div class="page-title">RACE CONTROL</div>
+    <div class="page-subtitle">Admin Command Center</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:.75rem">
+    <span class="status-dot {{ settings.status or 'upcoming' }}"></span>
+    <span style="font-weight:700;letter-spacing:1px;text-transform:uppercase">{{ (settings.status or 'upcoming').title() }}</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="grid-4 mb-3">
+  <div class="card" style="text-align:center">
+    <div style="font-size:1.5rem;margin-bottom:.5rem">👥</div>
+    <div class="stat-big text-gold">{{ stats.teams }}</div>
+    <div class="text-muted text-sm">Teams</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:1.5rem;margin-bottom:.5rem">📋</div>
+    <div class="stat-big" style="color:var(--blue)">{{ stats.problems }}</div>
+    <div class="text-muted text-sm">Problems</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:1.5rem;margin-bottom:.5rem">📨</div>
+    <div class="stat-big" style="color:var(--green)">{{ stats.submissions }}</div>
+    <div class="text-muted text-sm">Submissions</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:{% if stats.pending > 0 %}rgba(255,214,0,0.5){% else %}var(--border){% endif %}">
+    <div style="font-size:1.5rem;margin-bottom:.5rem">⏳</div>
+    <div class="stat-big" style="color:var(--gold)">{{ stats.pending }}</div>
+    <div class="text-muted text-sm">Pending Review</div>
+  </div>
+</div>
+
+<!-- EVENT CONTROL -->
+<div class="card mb-3">
+  <div class="card-header">
+    <div class="card-title">🏁 Event Control Panel</div>
+    <div style="font-size:.85rem;color:var(--muted)">Race Status Management</div>
+  </div>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem">
+    <button class="btn btn-success" onclick="eventAction('start')"><i class="fas fa-play"></i> Start Race</button>
+    <button class="btn btn-warning" onclick="eventAction('pause')"><i class="fas fa-pause"></i> Pause</button>
+    <button class="btn btn-danger" onclick="eventAction('end')"><i class="fas fa-stop"></i> End Race</button>
+  </div>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:1rem">
+    <button class="btn btn-ghost" onclick="eventAction('lock')"><i class="fas fa-lock"></i> Lock Submissions</button>
+    <button class="btn btn-ghost" onclick="eventAction('unlock')"><i class="fas fa-unlock"></i> Unlock Submissions</button>
+    <button class="btn btn-ghost" onclick="eventAction('freeze')"><i class="fas fa-snowflake"></i> Freeze Leaderboard</button>
+    <button class="btn btn-ghost" onclick="eventAction('unfreeze')"><i class="fas fa-fire"></i> Unfreeze Leaderboard</button>
+  </div>
+</div>
+
+<!-- ANNOUNCE -->
+<div class="card mb-3">
+  <div class="card-header">
+    <div class="card-title">📢 Send Announcement</div>
+  </div>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+    <input type="text" id="ann-title" class="form-control" placeholder="Title" style="flex:1;min-width:180px">
+    <input type="text" id="ann-msg" class="form-control" placeholder="Message" style="flex:2;min-width:240px">
+    <button class="btn btn-primary" onclick="sendAnnouncement()"><i class="fas fa-broadcast-tower"></i> Broadcast</button>
+  </div>
+</div>
+
+<!-- RECENT SUBMISSIONS -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Recent Submissions</div>
+    <a href="/admin/submissions" class="btn btn-outline btn-sm">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Team</th><th>Problem</th><th>Language</th><th>Status</th><th>Time</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for sub in recent_subs %}
+        <tr>
+          <td class="font-mono text-muted text-xs">{{ sub.id }}</td>
+          <td style="font-weight:600">{{ sub.team_name }}</td>
+          <td>{{ sub.problem_title }}</td>
+          <td><span class="badge">{{ sub.language }}</span></td>
+          <td>
+            <span class="badge {% if sub.status=='Accepted' %}green{% elif sub.status=='Pending' %}gold{% else %}red{% endif %}">
+              {{ sub.status }}
+            </span>
+          </td>
+          <td class="text-xs text-muted">{{ sub.submitted_at }}</td>
+          <td><button class="btn btn-sm btn-primary" onclick="gradeModal({{ sub.id }}, '{{ sub.problem_title|e }}', '{{ sub.team_name|e }}')">
+            {% if sub.status == 'Pending' %}Grade{% else %}Update{% endif %}
+          </button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- GRADE MODAL -->
+<div class="modal-overlay" id="grade-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Grade Submission</div>
+      <button class="modal-close" onclick="closeModal('grade-modal')">✕</button>
+    </div>
+    <div id="grade-info" style="margin-bottom:1.25rem;color:var(--muted);font-size:.9rem"></div>
+    <div class="form-group">
+      <label class="form-label">Verdict</label>
+      <select id="grade-status" class="form-control">
+        <option value="Accepted">✅ Accepted</option>
+        <option value="Wrong Answer">❌ Wrong Answer</option>
+        <option value="Partial">🔶 Partial Credit</option>
+        <option value="TLE">⏱️ Time Limit Exceeded</option>
+        <option value="Pending">⏳ Keep Pending</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Points to Award</label>
+      <input type="number" id="grade-points" class="form-control" placeholder="0" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Admin Note (optional)</label>
+      <input type="text" id="grade-note" class="form-control" placeholder="Feedback for team...">
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitGrade()">Submit Grade</button>
+      <button class="btn btn-ghost" onclick="closeModal('grade-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function eventAction(action){
+  if(['end','lock'].includes(action)&&!confirm('Confirm: '+action+'?'))return;
+  const fd=new FormData();fd.append('action',action);
+  const r=await fetch('/admin/event',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.success){showToast('Action: '+action+' done','success');setTimeout(()=>location.reload(),1000);}
+}
+
+async function sendAnnouncement(){
+  const title=document.getElementById('ann-title').value.trim();
+  const message=document.getElementById('ann-msg').value.trim();
+  if(!title||!message){showToast('Fill both fields','error');return;}
+  const r=await fetch('/admin/announce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,message})});
+  const d=await r.json();
+  if(d.success){showToast('Announcement sent!','success');document.getElementById('ann-title').value='';document.getElementById('ann-msg').value='';}
+}
+
+let currentSid=null;
+function gradeModal(sid,problem,team){
+  currentSid=sid;
+  document.getElementById('grade-info').textContent=`Problem: ${problem} | Team: ${team}`;
+  document.getElementById('grade-points').value='';
+  document.getElementById('grade-note').value='';
+  openModal('grade-modal');
+}
+
+async function submitGrade(){
+  const status=document.getElementById('grade-status').value;
+  const points=parseInt(document.getElementById('grade-points').value)||0;
+  const note=document.getElementById('grade-note').value;
+  const r=await fetch(`/admin/submissions/${currentSid}/grade`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status,points,note})
+  });
+  const d=await r.json();
+  if(d.success){showToast('Grade saved!','success');closeModal('grade-modal');setTimeout(()=>location.reload(),1000);}
+  else showToast('Error','error');
+}
+</script>
+{% endblock %}

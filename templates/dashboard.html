@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block title %}Team Dashboard — Grand Prix{% endblock %}
+{% block extra_css %}
+<style>
+.dash-grid{display:grid;grid-template-columns:280px 1fr;gap:1.5rem;min-height:calc(100vh - 64px);padding:1.5rem}
+.problems-list{display:grid;gap:.75rem}
+.problem-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;
+              display:flex;align-items:center;gap:1.5rem;cursor:pointer;transition:all .2s;text-decoration:none;color:var(--text)}
+.problem-item:hover{border-color:rgba(255,23,68,0.4);transform:translateX(4px)}
+.problem-item.solved{border-color:rgba(0,230,118,0.3)}
+.prob-points{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--gold);
+             min-width:60px;text-align:center}
+.prob-info{flex:1}
+.prob-title{font-weight:700;font-size:1rem;margin-bottom:.25rem}
+.prob-meta{display:flex;gap:.75rem;align-items:center;font-size:.8rem;color:var(--muted)}
+.prob-action{color:var(--muted)}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center}
+.stat-card .stat-big{font-family:'Orbitron',monospace;font-size:1.75rem;font-weight:700}
+.status-event{display:flex;align-items:center;gap:.75rem;background:var(--surface);border:1px solid var(--border);
+              border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem}
+.first-blood-badge{display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,23,68,0.15);
+                   border:1px solid rgba(255,23,68,0.3);border-radius:20px;padding:.2rem .6rem;
+                   font-size:.7rem;font-weight:700;color:var(--red)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="dash-grid">
+
+  <!-- LEFT SIDEBAR -->
+  <div>
+    <!-- Team Info -->
+    {% if team %}
+    <div class="card mb-2">
+      <div class="card-header">
+        <div class="card-title">Your Team</div>
+        {% if team.disqualified %}<span class="badge red">DISQUALIFIED</span>{% endif %}
+      </div>
+      <div style="font-size:1.3rem;font-weight:700;margin-bottom:.5rem">{{ team.name }}</div>
+      <div class="text-muted text-sm mb-2">ID: {{ team.team_id_display or 'GP0000' }}</div>
+      <div style="font-size:.75rem;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">Invite Code</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:1.1rem;letter-spacing:.3em;color:var(--gold);
+                  background:var(--surface2);padding:.5rem .75rem;border-radius:8px;cursor:pointer"
+           onclick="navigator.clipboard.writeText('{{ team.invite_code }}');showToast('Code copied!','success')">
+        {{ team.invite_code }}
+        <i class="fas fa-copy" style="font-size:.8rem;margin-left:.5rem;opacity:.5"></i>
+      </div>
+      <div style="margin-top:1rem">
+        <div style="font-size:.75rem;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">Members</div>
+        {% for m in members %}
+        <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--gold));
+                      display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#000">
+            {{ m.name[0].upper() }}
+          </div>
+          <div style="font-size:.9rem">{{ m.name }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card mb-2">
+      <div class="card-title">No Team</div>
+      <p class="text-muted text-sm mt-1">You're not in a team. Register or use an invite code to join one.</p>
+    </div>
+    {% endif %}
+
+    <!-- Live Status -->
+    <div class="card mb-2">
+      <div class="card-title mb-2">Contest Status</div>
+      <div class="status-event">
+        <span class="status-dot {{ settings.status or 'upcoming' }}"></span>
+        <span style="font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:.9rem">
+          {{ (settings.status or 'upcoming').title() }}
+        </span>
+      </div>
+      {% if settings.submissions_locked %}
+      <div style="background:rgba(255,109,0,0.1);border:1px solid rgba(255,109,0,0.3);border-radius:8px;
+                  padding:.75rem;color:var(--orange);font-size:.85rem;font-weight:600">
+        🔒 Submissions Locked
+      </div>
+      {% endif %}
+      {% if settings.leaderboard_frozen %}
+      <div style="background:rgba(41,121,255,0.1);border:1px solid rgba(41,121,255,0.3);border-radius:8px;
+                  padding:.75rem;color:var(--blue);font-size:.85rem;font-weight:600;margin-top:.5rem">
+        ❄️ Leaderboard Frozen
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Quick Links -->
+    <div class="card">
+      <div class="card-title mb-2">Quick Links</div>
+      <a href="/leaderboard" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:.5rem">🏆 Leaderboard</a>
+      <a href="/history" class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:.5rem">📋 My Submissions</a>
+      <a href="/clarifications" class="btn btn-ghost" style="width:100%;justify-content:center">💬 Clarifications</a>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div>
+    <div class="page-header flex-between">
+      <div>
+        <div class="page-title">PROBLEM SET</div>
+        <div class="page-subtitle">{{ problems|length }} problems available</div>
+      </div>
+      <div id="live-score" style="text-align:right">
+        <div style="font-size:.75rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Your Score</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:700;color:var(--gold)" id="score-num">—</div>
+      </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+      <button class="btn btn-sm btn-primary" onclick="filterProblems('all')">All</button>
+      {% set cats = problems|map(attribute='category')|list|unique|list %}
+      {% for cat in cats %}
+      <button class="btn btn-sm btn-ghost" onclick="filterProblems('{{ cat }}')">{{ cat }}</button>
+      {% endfor %}
+    </div>
+
+    {% if settings.status == 'running' or settings.status == 'paused' %}
+    <div class="problems-list">
+      {% for p in problems %}
+      <a href="/problems/{{ p.id }}" class="problem-item" data-cat="{{ p.category }}">
+        <div class="prob-points">{{ p.points }}</div>
+        <div class="prob-info">
+          <div class="prob-title">{{ p.title }}</div>
+          <div class="prob-meta">
+            <span class="tag tag-{{ p.difficulty.lower() }}">{{ p.difficulty }}</span>
+            <span><i class="fas fa-folder"></i> {{ p.category }}</span>
+            {% if p.first_blood_team %}<span class="first-blood-badge">⚡ First Blood Taken</span>{% endif %}
+          </div>
+        </div>
+        <div class="prob-action"><i class="fas fa-chevron-right"></i></div>
+      </a>
+      {% else %}
+      <div class="card" style="text-align:center;padding:3rem">
+        <div style="font-size:3rem;margin-bottom:1rem">🏁</div>
+        <div style="font-weight:700">Problems Coming Soon</div>
+        <div class="text-muted text-sm mt-1">Problems will appear when the race starts</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center;padding:4rem">
+      <div style="font-size:4rem;margin-bottom:1.5rem">
+        {% if settings.status == 'upcoming' %}🏁{% elif settings.status == 'ended' %}🏆{% else %}⏸️{% endif %}
+      </div>
+      <div style="font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;margin-bottom:.75rem">
+        {% if settings.status == 'upcoming' %}Race Hasn't Started Yet
+        {% elif settings.status == 'ended' %}Race Has Ended
+        {% else %}Race Paused{% endif %}
+      </div>
+      <div class="text-muted">
+        {% if settings.status == 'upcoming' %}Warm up your engines. Problems go live when admin starts the race.
+        {% elif settings.status == 'ended' %}Thanks for participating! Check the leaderboard for final standings.
+        {% else %}The race has been temporarily paused by admin.{% endif %}
+      </div>
+      {% if settings.status == 'ended' %}
+      <a href="/leaderboard" class="btn btn-gold mt-3">🏆 View Final Leaderboard</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function filterProblems(cat){
+  document.querySelectorAll('.problem-item').forEach(el=>{
+    el.style.display=(cat==='all'||el.dataset.cat===cat)?'flex':'none';
+  });
+  document.querySelectorAll('[onclick^="filterProblems"]').forEach(b=>b.className='btn btn-sm btn-ghost');
+  event.target.className='btn btn-sm btn-primary';
+}
+</script>
+{% endblock %}

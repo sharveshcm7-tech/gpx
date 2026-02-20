@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Leaderboard — Grand Prix{% endblock %}
+{% block extra_css %}
+<style>
+.lb-header{background:linear-gradient(135deg,rgba(255,23,68,0.15),rgba(255,214,0,0.08));
+           border-bottom:1px solid var(--border);padding:3rem 2rem;text-align:center}
+.lb-container{max-width:1000px;margin:0 auto;padding:2rem}
+.podium-row{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:1rem;margin-bottom:3rem;align-items:end}
+.pod-card{border-radius:16px 16px 0 0;border:1px solid var(--border);padding:1.5rem;text-align:center;
+          background:var(--surface);transition:transform .2s}
+.pod-card:hover{transform:translateY(-4px)}
+.pod-1{background:linear-gradient(180deg,rgba(255,214,0,0.12),var(--surface));
+       border-color:rgba(255,214,0,0.4);min-height:200px;display:flex;flex-direction:column;justify-content:flex-end}
+.pod-2{min-height:160px;display:flex;flex-direction:column;justify-content:flex-end}
+.pod-3{min-height:130px;display:flex;flex-direction:column;justify-content:flex-end}
+.pod-trophy{font-size:2rem;margin-bottom:.5rem}
+.pod-team{font-weight:700;font-size:1rem;margin-bottom:.25rem}
+.pod-score{font-family:'Orbitron',monospace;font-size:1.25rem;font-weight:700}
+.p1-score{color:var(--gold)}
+.p2-score{color:#C0C0C0}
+.p3-score{color:#CD7F32}
+.pod-solved{font-size:.8rem;color:var(--muted);margin-top:.25rem}
+.lb-row{display:grid;grid-template-columns:60px 1fr 140px 100px 80px;
+         align-items:center;padding:.9rem 1.25rem;border-bottom:1px solid rgba(255,23,68,0.05);
+         transition:background .2s}
+.lb-row:hover{background:rgba(255,23,68,0.03)}
+.lb-row.header{background:var(--surface2);border-radius:10px 10px 0 0;font-family:'Orbitron',monospace;
+               font-size:.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.rank-badge{width:36px;height:36px;border-radius:10px;background:var(--surface3);display:flex;
+            align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:.8rem;font-weight:700}
+.frozen-bar{background:linear-gradient(90deg,rgba(41,121,255,0.15),transparent);border:1px solid rgba(41,121,255,0.3);
+            border-radius:8px;padding:.75rem 1.25rem;display:flex;align-items:center;gap:1rem;color:var(--blue);
+            font-size:.9rem;font-weight:600;margin-bottom:1rem}
+.change-indicator{font-size:.8rem;margin-left:.5rem}
+.change-up{color:var(--green)}
+.change-down{color:var(--red)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="lb-header">
+  <div style="font-family:'Orbitron',monospace;font-size:.8rem;letter-spacing:3px;color:var(--muted);margin-bottom:.75rem;text-transform:uppercase">
+    🏆 Grand Prix Code Race
+  </div>
+  <h1 style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;margin-bottom:.75rem">
+    LEADERBOARD
+  </h1>
+  <div style="color:var(--muted);font-size:.9rem">
+    Auto-refreshes every 30 seconds &nbsp;|&nbsp;
+    <span id="refresh-countdown">30</span>s until next update
+  </div>
+</div>
+
+<div class="lb-container">
+  {% if settings.leaderboard_frozen %}
+  <div class="frozen-bar">
+    <i class="fas fa-snowflake"></i>
+    <span>Leaderboard is FROZEN — Final standings being confirmed</span>
+  </div>
+  {% endif %}
+
+  <!-- PODIUM (Top 3) -->
+  {% if leaderboard|length >= 3 %}
+  <div class="podium-row">
+    <div class="pod-card pod-2">
+      <div class="pod-trophy">🥈</div>
+      <div class="pod-team">{{ leaderboard[1].name }}</div>
+      <div class="pod-score p2-score">{{ leaderboard[1].score }}</div>
+      <div class="pod-solved">{{ leaderboard[1].solved }} solved</div>
+    </div>
+    <div class="pod-card pod-1">
+      <div class="pod-trophy" style="font-size:2.5rem">🏆</div>
+      <div style="background:var(--gold);color:#000;border-radius:20px;padding:.2rem .75rem;font-size:.7rem;font-weight:700;margin-bottom:.5rem;display:inline-block">GRAND CHAMPION</div>
+      <div class="pod-team" style="font-size:1.1rem">{{ leaderboard[0].name }}</div>
+      <div class="pod-score p1-score" style="font-size:1.5rem">{{ leaderboard[0].score }}</div>
+      <div class="pod-solved">{{ leaderboard[0].solved }} solved</div>
+    </div>
+    <div class="pod-card pod-3">
+      <div class="pod-trophy">🥉</div>
+      <div class="pod-team">{{ leaderboard[2].name }}</div>
+      <div class="pod-score p3-score">{{ leaderboard[2].score }}</div>
+      <div class="pod-solved">{{ leaderboard[2].solved }} solved</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- FULL TABLE -->
+  <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div class="lb-row header">
+      <div>Rank</div>
+      <div>Team</div>
+      <div style="text-align:center">Score</div>
+      <div style="text-align:center">Solved</div>
+      <div style="text-align:right">Status</div>
+    </div>
+    {% for team in leaderboard %}
+    <div class="lb-row" id="team-row-{{ team.id }}">
+      <div>
+        {% if loop.index <= 3 %}
+        <div class="rank-badge" style="background:{% if loop.index==1 %}rgba(255,214,0,0.2){% elif loop.index==2 %}rgba(192,192,192,0.2){% else %}rgba(205,127,50,0.2){% endif %}">
+          {{ loop.index }}
+        </div>
+        {% else %}
+        <div class="rank-badge" style="color:var(--muted)">{{ loop.index }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <div style="font-weight:700">{{ team.name }}</div>
+        <div class="text-muted text-xs">{{ team.team_id_display or '' }}</div>
+      </div>
+      <div style="text-align:center;font-family:'Orbitron',monospace;font-weight:700;font-size:1.1rem;color:var(--gold)">
+        {{ team.score }}
+      </div>
+      <div style="text-align:center;font-weight:700">{{ team.solved }}</div>
+      <div style="text-align:right">
+        <span class="badge green" style="font-size:.7rem">Active</span>
+      </div>
+    </div>
+    {% else %}
+    <div style="padding:3rem;text-align:center;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:1rem">🏎️</div>
+      <div>Race hasn't started yet — check back soon!</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="text-align:center;margin-top:1.5rem;color:var(--muted);font-size:.8rem">
+    Last updated: <span id="last-updated">just now</span>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let countdown=30;
+function tick(){
+  countdown--;
+  document.getElementById('refresh-countdown').textContent=countdown;
+  if(countdown<=0){
+    refreshLB();
+    countdown=30;
+  }
+}
+setInterval(tick,1000);
+
+async function refreshLB(){
+  try{
+    const r=await fetch('/api/leaderboard');
+    const data=await r.json();
+    // Update scores in real time
+    document.getElementById('last-updated').textContent='just now';
+    // Full reload for simplicity
+    if(!document.querySelector('.frozen-bar'))location.reload();
+  }catch(e){}
+}
+</script>
+{% endblock %}

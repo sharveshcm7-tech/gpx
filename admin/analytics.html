@@ -1,0 +1,110 @@
+{% extends 'admin/base_admin.html' %}
+{% block title %}Analytics — Admin Grand Prix{% endblock %}
+{% block admin_content %}
+<div class="page-header flex-between">
+  <div>
+    <div class="page-title">ANALYTICS & REPORTS</div>
+    <div class="page-subtitle">Event performance overview</div>
+  </div>
+  <a href="/admin/export/leaderboard" class="btn btn-gold"><i class="fas fa-download"></i> Export Leaderboard CSV</a>
+</div>
+
+<div class="grid-2 mb-3">
+  <!-- Submissions by Status -->
+  <div class="card">
+    <div class="card-title mb-2">Submissions by Status</div>
+    <div id="status-chart">
+      {% for row in status_counts %}
+      <div style="margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.35rem">
+          <span style="font-weight:600">{{ row.status }}</span>
+          <span style="font-family:'Orbitron',monospace;color:var(--gold)">{{ row.c }}</span>
+        </div>
+        <div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden">
+          <div style="height:100%;border-radius:4px;width:{{ [(row.c / (status_counts|map(attribute='c')|sum or 1) * 100)|int, 100]|min }}%;
+               background:{% if row.status=='Accepted' %}var(--green){% elif row.status=='Pending' %}var(--gold){% else %}var(--red){% endif %};
+               transition:width .5s ease">
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-muted">No submissions yet</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Most Solved Problems -->
+  <div class="card">
+    <div class="card-title mb-2">Most Solved Problems</div>
+    {% for row in most_solved %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <span style="font-family:'Orbitron',monospace;color:var(--muted);font-size:.75rem;margin-right:.5rem">{{ loop.index }}.</span>
+        <span style="font-weight:600">{{ row.title }}</span>
+      </div>
+      <span class="badge green">{{ row.count }} solves</span>
+    </div>
+    {% else %}
+    <div class="text-muted">No accepted submissions yet</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Daily Submissions Chart -->
+<div class="card">
+  <div class="card-title mb-2">Submission Activity</div>
+  {% if daily_subs %}
+  <div style="position:relative;height:200px;display:flex;align-items:flex-end;gap:8px;padding:1rem 0">
+    {% set max_val = daily_subs|map(attribute='c')|max %}
+    {% for row in daily_subs %}
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.35rem">
+      <span style="font-size:.65rem;color:var(--muted)">{{ row.c }}</span>
+      <div style="width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--red),rgba(255,23,68,0.3));
+                  height:{{ (row.c / max_val * 160)|int }}px;min-height:4px;transition:height .5s ease"></div>
+      <span style="font-size:.6rem;color:var(--muted);transform:rotate(-35deg);transform-origin:center;white-space:nowrap">{{ row.day }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-muted" style="padding:2rem;text-align:center">No submission data yet</div>
+  {% endif %}
+</div>
+
+<!-- Leaderboard Preview -->
+<div class="card mt-3">
+  <div class="card-header">
+    <div class="card-title">Top 10 — Live Standings</div>
+    <a href="/leaderboard" class="btn btn-outline btn-sm">Full Leaderboard</a>
+  </div>
+  <div id="lb-preview">Loading...</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function loadLB(){
+  const r=await fetch('/api/leaderboard');
+  const data=await r.json();
+  const top=data.slice(0,10);
+  if(!top.length){document.getElementById('lb-preview').innerHTML='<p class="text-muted" style="padding:1rem">No teams ranked yet</p>';return;}
+  document.getElementById('lb-preview').innerHTML=`
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="padding:.5rem 1rem;text-align:left;font-size:.7rem;letter-spacing:2px;color:var(--muted);font-family:\'Orbitron\',monospace">RANK</th>
+        <th style="padding:.5rem 1rem;text-align:left;font-size:.7rem;letter-spacing:2px;color:var(--muted);font-family:\'Orbitron\',monospace">TEAM</th>
+        <th style="padding:.5rem 1rem;text-align:right;font-size:.7rem;letter-spacing:2px;color:var(--muted);font-family:\'Orbitron\',monospace">SCORE</th>
+        <th style="padding:.5rem 1rem;text-align:right;font-size:.7rem;letter-spacing:2px;color:var(--muted);font-family:\'Orbitron\',monospace">SOLVED</th>
+      </tr></thead>
+      <tbody>
+        ${top.map((t,i)=>`<tr>
+          <td style="padding:.65rem 1rem">${i<3?['🥇','🥈','🥉'][i]:i+1}</td>
+          <td style="padding:.65rem 1rem;font-weight:700">${t.name}</td>
+          <td style="padding:.65rem 1rem;text-align:right;font-family:\'Orbitron\',monospace;color:var(--gold)">${t.score}</td>
+          <td style="padding:.65rem 1rem;text-align:right">${t.solved}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+loadLB();
+</script>
+{% endblock %}

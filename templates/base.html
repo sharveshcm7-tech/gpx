@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Grand Prix Code Race{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --red: #FF1744;
+  --gold: #FFD600;
+  --carbon: #0A0A0F;
+  --surface: #12121A;
+  --surface2: #1A1A28;
+  --surface3: #252535;
+  --border: rgba(255,23,68,0.2);
+  --text: #E8E8F0;
+  --muted: #6B6B85;
+  --green: #00E676;
+  --blue: #2979FF;
+  --orange: #FF6D00;
+  --glow: 0 0 20px rgba(255,23,68,0.4);
+  --gold-glow: 0 0 20px rgba(255,214,0,0.4);
+}
+[data-theme="light"] {
+  --carbon: #F0F0F8;
+  --surface: #FFFFFF;
+  --surface2: #F5F5FC;
+  --surface3: #EAEAF5;
+  --text: #1A1A2E;
+  --muted: #6B6B85;
+  --border: rgba(255,23,68,0.3);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--carbon);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;
+     overflow-x:hidden;transition:background .3s,color .3s}
+
+/* TRACK PATTERN BACKGROUND */
+body::before{content:'';position:fixed;inset:0;z-index:-1;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 50px,
+    rgba(255,23,68,0.015) 50px,
+    rgba(255,23,68,0.015) 51px
+  ),
+  repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 50px,
+    rgba(255,23,68,0.015) 50px,
+    rgba(255,23,68,0.015) 51px
+  )
+}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);
+    backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 2rem;height:64px}
+.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-logo{width:36px;height:36px;background:var(--red);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+          display:flex;align-items:center;justify-content:center;font-size:16px;animation:spin-slow 8s linear infinite}
+@keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.nav-title{font-family:'Orbitron',monospace;font-weight:900;font-size:1.1rem;letter-spacing:3px;
+           background:linear-gradient(90deg,var(--red),var(--gold));-webkit-background-clip:text;
+           -webkit-text-fill-color:transparent}
+.nav-links{display:flex;align-items:center;gap:1.5rem}
+.nav-links a{color:var(--muted);text-decoration:none;font-weight:600;letter-spacing:1px;
+             text-transform:uppercase;font-size:.85rem;transition:color .2s;padding:.5rem 0;
+             border-bottom:2px solid transparent}
+.nav-links a:hover,.nav-links a.active{color:var(--red);border-bottom-color:var(--red)}
+.nav-actions{display:flex;align-items:center;gap:1rem}
+.theme-toggle{background:none;border:1px solid var(--border);color:var(--text);width:36px;height:36px;
+              border-radius:8px;cursor:pointer;font-size:1rem;transition:all .2s}
+.theme-toggle:hover{border-color:var(--gold);color:var(--gold)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:.6rem 1.4rem;border-radius:6px;
+     font-family:'Rajdhani',sans-serif;font-weight:600;font-size:.9rem;letter-spacing:1px;
+     text-transform:uppercase;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:var(--red);color:#fff;box-shadow:0 0 20px rgba(255,23,68,0.3)}
+.btn-primary:hover{background:#FF4466;box-shadow:0 0 30px rgba(255,23,68,0.5);transform:translateY(-1px)}
+.btn-gold{background:var(--gold);color:#000;box-shadow:0 0 20px rgba(255,214,0,0.3)}
+.btn-gold:hover{background:#FFE033;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--red);color:var(--red)}
+.btn-sm{padding:.4rem .9rem;font-size:.8rem}
+.btn-success{background:var(--green);color:#000}
+.btn-danger{background:var(--red);color:#fff}
+.btn-warning{background:var(--orange);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--surface3)}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;
+      transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:rgba(255,23,68,0.4);box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;
+             padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Orbitron',monospace;font-weight:700;font-size:.95rem;letter-spacing:2px;
+            color:var(--gold);text-transform:uppercase}
+
+/* TAGS */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:.25rem .75rem;border-radius:20px;
+     font-size:.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.tag-easy{background:rgba(0,230,118,0.15);color:var(--green);border:1px solid rgba(0,230,118,0.3)}
+.tag-medium{background:rgba(255,109,0,0.15);color:var(--orange);border:1px solid rgba(255,109,0,0.3)}
+.tag-hard{background:rgba(255,23,68,0.15);color:var(--red);border:1px solid rgba(255,23,68,0.3)}
+.tag-accepted{background:rgba(0,230,118,0.15);color:var(--green)}
+.tag-pending{background:rgba(255,214,0,0.15);color:var(--gold)}
+.tag-wrong{background:rgba(255,23,68,0.15);color:var(--red)}
+
+/* STATUS INDICATORS */
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.status-dot.paused{background:var(--orange)}
+.status-dot.ended{background:var(--muted)}
+.status-dot.upcoming{background:var(--blue)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
+
+/* TABLES */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+th{background:var(--surface2);padding:.75rem 1rem;text-align:left;font-family:'Orbitron',monospace;
+   font-size:.7rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,23,68,0.05);font-size:.9rem;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,23,68,0.03)}
+
+/* FORM */
+.form-group{margin-bottom:1.25rem}
+.form-label{display:block;font-size:.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+            color:var(--muted);margin-bottom:.5rem}
+.form-control{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+              padding:.7rem 1rem;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:1rem;
+              transition:border-color .2s,box-shadow .2s;outline:none}
+.form-control:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(255,23,68,0.1)}
+select.form-control option{background:var(--surface2)}
+textarea.form-control{resize:vertical;min-height:120px}
+
+/* TOAST */
+#toast-container{position:fixed;bottom:2rem;right:2rem;z-index:9999;display:flex;flex-direction:column;gap:.75rem}
+.toast{padding:1rem 1.5rem;border-radius:10px;font-weight:600;font-size:.9rem;letter-spacing:.5px;
+       animation:slideIn .3s ease;display:flex;align-items:center;gap:.75rem;min-width:280px;
+       border:1px solid rgba(255,255,255,.1)}
+.toast-success{background:rgba(0,230,118,0.15);color:var(--green);border-color:rgba(0,230,118,0.3)}
+.toast-error{background:rgba(255,23,68,0.15);color:var(--red);border-color:rgba(255,23,68,0.3)}
+.toast-info{background:rgba(41,121,255,0.15);color:var(--blue);border-color:rgba(41,121,255,0.3)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;
+               align-items:center;justify-content:center;backdrop-filter:blur(5px)}
+.modal-overlay.active{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;
+       max-width:600px;width:90%;max-height:90vh;overflow-y:auto;animation:scaleIn .2s ease}
+@keyframes scaleIn{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.modal-title{font-family:'Orbitron',monospace;font-weight:700;font-size:1rem;color:var(--gold)}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer}
+.modal-close:hover{color:var(--red)}
+
+/* SIDEBAR LAYOUT */
+.admin-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 0}
+.sidebar-section{margin-bottom:2rem;padding:0 1rem}
+.sidebar-label{font-family:'Orbitron',monospace;font-size:.65rem;letter-spacing:3px;color:var(--muted);
+               text-transform:uppercase;margin-bottom:.75rem;padding:0 .5rem}
+.sidebar a{display:flex;align-items:center;gap:.75rem;padding:.65rem .75rem;border-radius:8px;
+           color:var(--muted);text-decoration:none;font-weight:600;font-size:.9rem;transition:all .2s;
+           margin-bottom:2px}
+.sidebar a:hover,.sidebar a.active{background:rgba(255,23,68,0.1);color:var(--red)}
+.sidebar a i{width:18px;text-align:center}
+.main-content{padding:2rem;overflow-y:auto}
+
+/* RACING ELEMENTS */
+.speed-lines{position:fixed;right:0;top:0;width:200px;height:100%;pointer-events:none;z-index:0;opacity:.05;
+  background:repeating-linear-gradient(90deg,transparent 0,transparent 8px,var(--red) 8px,var(--red) 9px)}
+
+/* PODIUM */
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:1rem;padding:2rem 0}
+.podium-place{text-align:center;padding:1rem;border-radius:12px 12px 0 0;background:var(--surface2);
+              border:1px solid var(--border);flex:1;max-width:180px}
+.podium-place.p1{height:160px;background:linear-gradient(180deg,rgba(255,214,0,0.1),var(--surface2));
+                 border-color:rgba(255,214,0,0.5)}
+.podium-place.p2{height:120px}
+.podium-place.p3{height:90px}
+.podium-num{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900}
+.p1 .podium-num{color:var(--gold)}
+.p2 .podium-num{color:#C0C0C0}
+.p3 .podium-num{color:#CD7F32}
+
+/* MISC */
+.page-header{margin-bottom:2rem}
+.page-title{font-family:'Orbitron',monospace;font-weight:900;font-size:1.5rem;letter-spacing:3px;
+            background:linear-gradient(90deg,var(--red),var(--gold));-webkit-background-clip:text;
+            -webkit-text-fill-color:transparent}
+.page-subtitle{color:var(--muted);margin-top:.5rem;font-size:1rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.flex{display:flex;gap:1rem}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.gap-sm{gap:.5rem}
+.mt-1{margin-top:.5rem}.mt-2{margin-top:1rem}.mt-3{margin-top:1.5rem}.mt-4{margin-top:2rem}
+.mb-1{margin-bottom:.5rem}.mb-2{margin-bottom:1rem}.mb-3{margin-bottom:1.5rem}
+.text-muted{color:var(--muted)}.text-red{color:var(--red)}.text-gold{color:var(--gold)}
+.text-green{color:var(--green)}.text-sm{font-size:.85rem}.text-xs{font-size:.75rem}
+.font-mono{font-family:'Share Tech Mono',monospace}
+.stat-big{font-family:'Orbitron',monospace;font-size:2rem;font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:.2rem .6rem;border-radius:20px;
+       font-size:.75rem;font-weight:700;background:var(--surface3);color:var(--muted)}
+.badge.red{background:rgba(255,23,68,0.15);color:var(--red)}
+.badge.gold{background:rgba(255,214,0,0.15);color:var(--gold)}
+.badge.green{background:rgba(0,230,118,0.15);color:var(--green)}
+.badge.blue{background:rgba(41,121,255,0.15);color:var(--blue)}
+.rank-medal{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-family:'Orbitron',monospace;font-size:.7rem;font-weight:700}
+.rank-1{background:var(--gold);color:#000}
+.rank-2{background:#C0C0C0;color:#000}
+.rank-3{background:#CD7F32;color:#fff}
+
+/* ANNOUNCEMENT BANNER */
+.announce-bar{background:linear-gradient(90deg,rgba(255,23,68,0.15),rgba(255,214,0,0.1));
+              border-bottom:1px solid var(--border);padding:.6rem 2rem;display:flex;align-items:center;
+              gap:1rem;font-size:.9rem;overflow:hidden}
+.announce-label{background:var(--red);color:#fff;padding:.2rem .6rem;border-radius:4px;
+                font-size:.7rem;font-weight:700;letter-spacing:1px;white-space:nowrap}
+
+@media(max-width:768px){
+  .admin-layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  nav{padding:0 1rem}
+  .nav-links{display:none}
+}
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div id="announcement-bar" style="display:none" class="announce-bar">
+  <span class="announce-label">📢 LIVE</span>
+  <span id="announce-text"></span>
+</div>
+
+<nav>
+  <a class="nav-brand" href="/">
+    <div class="nav-logo">🏁</div>
+    <span class="nav-title">GRAND PRIX</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/leaderboard">Leaderboard</a>
+    {% if session.get('user_id') %}
+      {% if session.get('role') == 'admin' %}
+        <a href="/admin">Admin</a>
+      {% else %}
+        <a href="/dashboard">Dashboard</a>
+        <a href="/clarifications">Clarifications</a>
+        <a href="/history">History</a>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="nav-actions">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    {% if session.get('user_id') %}
+      <span style="color:var(--muted);font-size:.85rem">{{ session.get('name') }}</span>
+      <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+    {% else %}
+      <a href="/login" class="btn btn-outline btn-sm">Login</a>
+      <a href="/register" class="btn btn-primary btn-sm">Register</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div id="toast-container"></div>
+
+{% block content %}{% endblock %}
+
+<script>
+// Theme
+function toggleTheme(){
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('theme',t);
+  document.querySelector('.theme-toggle').textContent=t==='dark'?'🌙':'☀️';
+}
+const savedTheme=localStorage.getItem('theme')||'dark';
+document.documentElement.setAttribute('data-theme',savedTheme);
+document.querySelector('.theme-toggle').textContent=savedTheme==='dark'?'🌙':'☀️';
+
+// Toast
+function showToast(msg,type='info'){
+  const c=document.getElementById('toast-container');
+  const t=document.createElement('div');
+  const icons={success:'✅',error:'❌',info:'ℹ️'};
+  t.className=`toast toast-${type}`;
+  t.innerHTML=`<span>${icons[type]||'📢'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{t.style.animation='slideIn .3s ease reverse';setTimeout(()=>t.remove(),300)},4000);
+}
+
+// Poll announcements
+let lastAnnounceId=0;
+async function pollAnnouncements(){
+  try{
+    const r=await fetch('/api/announcements');
+    const data=await r.json();
+    if(data.length&&data[0].id!==lastAnnounceId){
+      lastAnnounceId=data[0].id;
+      const bar=document.getElementById('announcement-bar');
+      document.getElementById('announce-text').textContent=data[0].title+': '+data[0].message;
+      bar.style.display='flex';
+    }
+  }catch(e){}
+}
+pollAnnouncements();
+setInterval(pollAnnouncements,15000);
+
+// Modals
+function openModal(id){document.getElementById(id).classList.add('active')}
+function closeModal(id){document.getElementById(id).classList.remove('active')}
+document.addEventListener('click',e=>{
+  if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('active');
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

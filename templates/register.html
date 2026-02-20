@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Register — Grand Prix Code Race{% endblock %}
+{% block extra_css %}
+<style>
+.auth-page{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;
+           padding:2rem;background:radial-gradient(ellipse at 50% 50%,rgba(255,23,68,0.07) 0%,transparent 70%)}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+           padding:3rem;width:100%;max-width:520px;animation:scaleIn .3s ease}
+.tab-selector{display:flex;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:2rem}
+.tab-btn{flex:1;padding:.6rem;border:none;background:none;color:var(--muted);font-family:'Rajdhani',sans-serif;
+         font-weight:600;cursor:pointer;border-radius:8px;transition:all .2s;font-size:.9rem;letter-spacing:1px}
+.tab-btn.active{background:var(--red);color:#fff}
+.team-section{display:none}
+.team-section.visible{display:block}
+.invite-display{background:var(--surface2);border:1px dashed var(--border);border-radius:10px;
+                padding:1.25rem;text-align:center;margin-top:1rem}
+.invite-code{font-family:'Share Tech Mono',monospace;font-size:1.5rem;letter-spacing:.5rem;
+             color:var(--gold);font-weight:700}
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:3rem;margin-bottom:.75rem">🏁</div>
+      <div style="font-family:'Orbitron',monospace;font-weight:900;font-size:1.25rem;letter-spacing:2px">JOIN THE RACE</div>
+      <div style="color:var(--muted);font-size:.9rem;margin-top:.5rem">Register for Grand Prix Code Race 2025</div>
+    </div>
+
+    <div id="success-box" style="display:none;background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);
+         border-radius:10px;padding:1.5rem;text-align:center;margin-bottom:1rem">
+      <div style="font-size:2rem;margin-bottom:.5rem">🎉</div>
+      <div style="color:var(--green);font-weight:700;font-size:1.1rem">Registration Successful!</div>
+      <div style="color:var(--muted);font-size:.9rem;margin-top:.5rem">Your invite code is shown below. <a href="/login" style="color:var(--red)">Login now →</a></div>
+      <div class="invite-display mt-2">
+        <div style="font-size:.75rem;color:var(--muted);letter-spacing:2px;margin-bottom:.5rem">TEAM INVITE CODE</div>
+        <div class="invite-code" id="invite-code-display">--------</div>
+        <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem">Share with teammates to join your team</div>
+      </div>
+    </div>
+
+    <div id="error-msg" style="display:none;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);
+         border-radius:8px;padding:.75rem 1rem;color:var(--red);font-size:.9rem;margin-bottom:1rem"></div>
+
+    <form id="registerForm">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="name" class="form-control" placeholder="Your full name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email" class="form-control" placeholder="you@university.edu" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" placeholder="Min 8 characters" required minlength="6">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Team</label>
+        <div class="tab-selector">
+          <button type="button" class="tab-btn active" onclick="setAction('create')">Create Team</button>
+          <button type="button" class="tab-btn" onclick="setAction('join')">Join with Code</button>
+          <button type="button" class="tab-btn" onclick="setAction('solo')">Solo Entry</button>
+        </div>
+
+        <div id="section-create" class="team-section visible">
+          <input type="text" name="team_name" class="form-control" placeholder="Team name (e.g. ByteSquad)">
+        </div>
+        <div id="section-join" class="team-section">
+          <input type="text" name="invite_code" class="form-control" placeholder="8-character invite code" style="text-transform:uppercase;letter-spacing:.2em">
+        </div>
+        <div id="section-solo" class="team-section">
+          <p class="text-muted text-sm" style="margin-top:.5rem">You'll compete as an individual. A solo team will be created for you.</p>
+        </div>
+      </div>
+
+      <input type="hidden" name="action" id="action-input" value="create">
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:.9rem">
+        🏎️ Enter the Race
+      </button>
+    </form>
+
+    <div style="text-align:center;font-size:.9rem;color:var(--muted);margin-top:1.5rem">
+      Already registered? <a href="/login" style="color:var(--red);font-weight:700">Sign in →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function setAction(action){
+  document.getElementById('action-input').value=action;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.team-section').forEach(s=>s.classList.remove('visible'));
+  document.getElementById('section-'+action).classList.add('visible');
+  // handle team name field
+  const tn=document.querySelector('[name=team_name]');
+  if(action==='solo')tn.value='Solo_'+Date.now();
+}
+
+document.getElementById('registerForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const btn=e.target.querySelector('button[type=submit]');
+  btn.textContent='Registering...';btn.disabled=true;
+  try{
+    const r=await fetch('/register',{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.success){
+      document.getElementById('registerForm').style.display='none';
+      document.getElementById('success-box').style.display='block';
+      document.getElementById('invite-code-display').textContent=d.invite_code||'Check team page';
+      showToast('Welcome to the race!','success');
+    }else{
+      document.getElementById('error-msg').style.display='block';
+      document.getElementById('error-msg').textContent=d.error||'Registration failed';
+    }
+  }catch(err){showToast('Network error','error');}
+  btn.textContent='🏎️ Enter the Race';btn.disabled=false;
+});
+</script>
+{% endblock %}

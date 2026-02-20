@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Submission History — Grand Prix{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:2rem">
+  <div class="page-header">
+    <div class="page-title">SUBMISSION HISTORY</div>
+    <div class="page-subtitle">All your code submissions in this race</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Problem</th>
+          <th>Language</th>
+          <th>Status</th>
+          <th>Points</th>
+          <th>Submitted</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in submissions %}
+        <tr>
+          <td class="font-mono text-muted">{{ sub.id }}</td>
+          <td style="font-weight:600">{{ sub.problem_title }}</td>
+          <td class="badge">{{ sub.language }}</td>
+          <td>
+            <span class="badge {% if sub.status == 'Accepted' %}green{% elif sub.status == 'Pending' %}gold{% else %}red{% endif %}">
+              {{ sub.status }}
+            </span>
+          </td>
+          <td style="font-family:'Orbitron',monospace;color:var(--gold)">{{ sub.points_awarded }}</td>
+          <td class="text-muted text-sm">{{ sub.submitted_at }}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="viewCode({{ sub.id }})">
+              <i class="fas fa-code"></i>
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--muted)">No submissions yet. Start coding!</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Code Modal -->
+<div class="modal-overlay" id="code-modal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div class="modal-title">Submitted Code</div>
+      <button class="modal-close" onclick="closeModal('code-modal')">✕</button>
+    </div>
+    <div id="modal-status" style="margin-bottom:1rem"></div>
+    <pre id="code-display" style="max-height:500px;overflow-y:auto;font-size:.85rem"></pre>
+    <div id="admin-note" style="margin-top:1rem;color:var(--muted);font-size:.85rem"></div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function viewCode(sid){
+  const r=await fetch(`/admin/submissions/${sid}/code`);
+  const d=await r.json();
+  document.getElementById('code-display').textContent=d.code||'';
+  document.getElementById('modal-status').innerHTML=`<span class="badge ${d.status==='Accepted'?'green':d.status==='Pending'?'gold':'red'}">${d.status}</span> <span class="badge">${d.language}</span>`;
+  document.getElementById('admin-note').textContent=d.admin_note?'Admin note: '+d.admin_note:'';
+  openModal('code-modal');
+}
+</script>
+{% endblock %}
